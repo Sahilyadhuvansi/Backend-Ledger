@@ -100,9 +100,22 @@ const AccountDetails = () => {
             <h2 className="text-3xl font-black text-slate-900 leading-tight mb-2">
               Primary Vault
             </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider bg-white text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-200">
-                Ledger ID: {account._id.slice(-8).toUpperCase()}
+            <div className="flex items-center gap-3 mt-3">
+              <button
+                onClick={(e) => {
+                  navigator.clipboard.writeText(account._id);
+                  e.currentTarget.innerHTML = "Copied!";
+                  setTimeout(
+                    () => (e.currentTarget.innerHTML = "Copy ID"),
+                    2000,
+                  );
+                }}
+                className="text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-lg border border-indigo-200 transition-colors shadow-sm"
+              >
+                Copy ID
+              </button>
+              <span className="text-sm font-bold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-indigo-100 shadow-sm hidden sm:inline-block">
+                {account._id}
               </span>
             </div>
           </div>

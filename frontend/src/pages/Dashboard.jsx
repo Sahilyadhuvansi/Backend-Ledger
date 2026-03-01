@@ -102,15 +102,27 @@ const Dashboard = () => {
                 <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl ring-1 ring-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   <Wallet className="w-6 h-6" />
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                    account.status === "active"
-                      ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                      : "bg-slate-50 text-slate-500 border-slate-200"
-                  }`}
-                >
-                  {account.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(account._id);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-white text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all z-10"
+                    title="Copy Ledger ID"
+                  >
+                    <span>ID: {account._id.substring(0, 8)}...</span>
+                  </button>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                      account.status === "active"
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : "bg-slate-50 text-slate-500 border-slate-200"
+                    }`}
+                  >
+                    {account.status}
+                  </span>
+                </div>
               </div>
 
               <div>

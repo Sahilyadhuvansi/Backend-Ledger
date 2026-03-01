@@ -20,6 +20,16 @@ const createTransaction = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cannot transfer to the same account");
   }
 
+  if (
+    !mongoose.Types.ObjectId.isValid(fromAccount) ||
+    !mongoose.Types.ObjectId.isValid(toAccount)
+  ) {
+    throw new ApiError(
+      400,
+      "Invalid Account ID format. Please ensure you are sending to a valid Ledger ID.",
+    );
+  }
+
   // 1. Check for existing transaction (idempotency)
   const existingTransaction = await Transaction.findOne({ idempotencyKey });
   if (existingTransaction) {
