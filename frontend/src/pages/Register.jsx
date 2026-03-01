@@ -9,7 +9,6 @@ import {
   Fingerprint,
   ShieldCheck,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -31,7 +30,9 @@ const Register = () => {
       navigate("/dashboard");
     } catch (err) {
       setError(
-        err.message || "Registration failed. System could not verify details.",
+        err.response?.data?.message ||
+          err.message ||
+          "Registration failed. System could not verify details.",
       );
     } finally {
       setLoading(false);
@@ -55,7 +56,7 @@ const Register = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="glass-panel p-10 border border-white/10 backdrop-blur-2xl bg-white/[0.02] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
+        <div className="glass-panel p-10 sm:p-12 border border-white/10 backdrop-blur-2xl bg-white/[0.04] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] rounded-2xl">
           <div className="flex flex-col items-center mb-10 text-center">
             <div className="w-20 h-20 bg-gradient-to-tr from-rose-500 to-orange-500 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-rose-500/20 ring-1 ring-white/20">
               <Fingerprint className="w-10 h-10 text-white" />

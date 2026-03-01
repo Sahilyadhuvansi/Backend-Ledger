@@ -1,6 +1,10 @@
 {
   "name": "ledgerpro-suite",
   "version": "1.0.0",
+  "description": "Premium Full-Stack Ledger Management Suite",
+  "engines": {
+    "node": ">=18.x"
+  },
   "scripts": {
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm run dev",

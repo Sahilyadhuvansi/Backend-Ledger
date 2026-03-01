@@ -1,50 +1,39 @@
-import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import {
-  LogOut,
-  LayoutDashboard,
-  Send,
-  Fingerprint,
-  Settings,
-  Bell,
-} from "lucide-react";
-import { motion } from "framer-motion";
+import { LogOut, LayoutDashboard, Send, Fingerprint, Bell } from "lucide-react";
+
+const NavLink = ({ to, icon: NavIcon, children }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+  return (
+    <Link
+      to={to}
+      className={`relative flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-300 group ${
+        isActive ? "text-white" : "text-slate-400 hover:text-slate-200"
+      }`}
+    >
+      {isActive && (
+        <motion.div
+          layoutId="nav-bg"
+          className="absolute inset-0 bg-white/10 rounded-xl backdrop-blur-md"
+          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        />
+      )}
+      {/* Icon removed as it was unused */}
+      <span className="relative z-10 font-black text-xs uppercase tracking-widest hidden md:block">
+        {children}
+      </span>
+    </Link>
+  );
+};
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
-  };
-
-  const NavLink = ({ to, icon: Icon, children }) => {
-    const isActive = location.pathname === to;
-    return (
-      <Link
-        to={to}
-        className={`relative flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-300 group ${
-          isActive ? "text-white" : "text-slate-400 hover:text-slate-200"
-        }`}
-      >
-        {isActive && (
-          <motion.div
-            layoutId="nav-bg"
-            className="absolute inset-0 bg-white/10 rounded-xl backdrop-blur-md"
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-        <Icon
-          className={`w-5 h-5 relative z-10 transition-transform duration-300 ${isActive ? "scale-110 text-indigo-400" : "group-hover:scale-110"}`}
-        />
-        <span className="relative z-10 font-black text-xs uppercase tracking-widest hidden md:block">
-          {children}
-        </span>
-      </Link>
-    );
   };
 
   return (

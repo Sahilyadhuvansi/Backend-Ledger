@@ -1,6 +1,10 @@
 require("dotenv").config();
 const app = require("./app");
 const connectToDB = require("./config/db");
+const validateEnv = require("./config/validateEnv");
+
+// Validate environment variables
+validateEnv();
 
 // Database connection
 connectToDB();

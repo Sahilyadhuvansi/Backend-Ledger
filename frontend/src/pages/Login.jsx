@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -28,7 +27,9 @@ const Login = () => {
       navigate("/dashboard");
     } catch (err) {
       setError(
-        err.message || "Verification failed. Please check your credentials.",
+        err.response?.data?.message ||
+          err.message ||
+          "Verification failed. Please check your credentials.",
       );
     } finally {
       setLoading(false);
@@ -53,7 +54,7 @@ const Login = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="glass-panel p-10 border border-white/10 backdrop-blur-2xl bg-white/[0.02] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
+        <div className="glass-panel p-10 sm:p-12 border border-white/10 backdrop-blur-2xl bg-white/[0.04] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] rounded-2xl">
           <div className="flex flex-col items-center mb-10 text-center">
             <motion.div
               whileHover={{ rotate: 360, scale: 1.1 }}

@@ -8,8 +8,8 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || "Something went wrong";
-    return Promise.reject(new Error(message));
+    // Re-throw the original Axios error so callers can access error.response
+    return Promise.reject(error);
   },
 );
 
