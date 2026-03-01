@@ -27,7 +27,9 @@ app.use(limiter); // Applied to all routes
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: [
+      "https://mini-bank-beta.vercel.app", // allow your deployed frontend
+    ],
     credentials: true,
   }),
 );
