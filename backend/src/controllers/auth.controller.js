@@ -20,6 +20,29 @@ const register = asyncHandler(async (req, res) => {
 
   const user = await User.create({ email, password, name });
 
+  // Free 500 Rupees Registration Bonus for the first 10 users only!
+  const totalUsers = await User.countDocuments();
+  const getsBonus = totalUsers <= 10;
+
+  const Account = require("../models/account.model");
+  const Ledger = require("../models/ledger.model");
+
+  const userAccount = await Account.create({
+    user: user._id,
+    currency: "INR",
+    balance: getsBonus ? 500 : 0,
+  });
+
+  if (getsBonus) {
+    // Create an unlinked ledger entry for the initial deposit
+    await Ledger.create({
+      account: userAccount._id,
+      amount: 500,
+      transaction: userAccount._id, // Using account ID as fake system transaction ID
+      type: "credit",
+    });
+  }
+
   const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
@@ -33,7 +56,6 @@ const register = asyncHandler(async (req, res) => {
 
   res.cookie("token", token, cookieOptions);
 
-  // Send registration email asynchronously
   sendRegistrationEmail(user.email, user.name).catch((err) =>
     console.error("Email sending failed:", err.message),
   );
@@ -44,7 +66,7 @@ const register = asyncHandler(async (req, res) => {
       new ApiResponse(
         201,
         { user: { _id: user._id, email: user.email, name: user.name }, token },
-        "User registered successfully",
+        `User registered successfully${getsBonus ? ". Added 500 INR Initial Bonus!" : ""}`,
       ),
     );
 });
