@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../utils/api";
 import {

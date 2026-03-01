@@ -31,7 +31,7 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-const restrictToSystemUser = asyncHandler(async (req, res, next) => {
+const restrictToSystemUser = asyncHandler(async (req, _res, next) => {
   if (!req.user || !req.user.systemUser) {
     // If systemUser was not selected in protect middleware, we re-fetch with selection
     const user = await User.findById(req.user._id).select("+systemUser");

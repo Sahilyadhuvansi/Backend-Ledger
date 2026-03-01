@@ -58,7 +58,7 @@ const login = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email }).select("+password");
   if (!user) {
-    throw new ApiError(404, "Invaid credentials");
+    throw new ApiError(404, "Invalid credentials");
   }
 
   const isValidPassword = await user.comparePassword(password);

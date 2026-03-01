@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LogOut, LayoutDashboard, Send, Fingerprint, Bell } from "lucide-react";

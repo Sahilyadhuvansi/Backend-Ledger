@@ -17,8 +17,6 @@ const authRoutes = require("./routes/auth.routes");
 const accountRoutes = require("./routes/account.routes");
 const transactionRoutes = require("./routes/transaction.routes");
 
-
-
 const requiredEnv = ["JWT_SECRET", "MONGO_URI"];
 requiredEnv.forEach((key) => {
   if (!process.env[key]) {
@@ -26,8 +24,6 @@ requiredEnv.forEach((key) => {
     process.exit(1);
   }
 });
-
-
 
 let dbError = null;
 
@@ -50,12 +46,8 @@ const connectDB = async () => {
   }
 };
 
-
-
 const app = express();
 app.set("trust proxy", 1);
-
-
 
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
@@ -76,10 +68,8 @@ app.use(
   }),
 );
 
-
-
 const allowedOrigins = [
-  ...(process.env.CORS_ORIGINS || "")
+  ...(process.env.CORS_ORIGIN || "")
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean),
@@ -95,6 +85,7 @@ app.use(
       if (!origin) return callback(null, true);
 
       if (
+        allowedOrigins.includes("*") ||
         allowedOrigins.includes(origin) ||
         (process.env.NODE_ENV !== "production" &&
           origin.startsWith("http://localhost"))
@@ -112,8 +103,6 @@ app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-
-
 app.use(
   "/api",
   rateLimit({
@@ -123,8 +112,6 @@ app.use(
     legacyHeaders: false,
   }),
 );
-
-
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -152,15 +139,11 @@ app.get("/health", (req, res) => {
   });
 });
 
-
-
 app.use("/api/auth", authRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/transactions", transactionRoutes);
 
-
-
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error("❌ Error:", err.message);
 
   res.status(err.statusCode || 500).json({
@@ -170,8 +153,6 @@ app.use((err, req, res, next) => {
         : err.message,
   });
 });
-
-
 
 const startServer = async () => {
   await connectDB();
