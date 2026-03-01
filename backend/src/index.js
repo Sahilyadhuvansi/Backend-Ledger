@@ -146,9 +146,11 @@ app.use("/api/transactions", transactionRoutes);
 app.use((err, _req, res, _next) => {
   console.error("❌ Error:", err.message);
 
-  res.status(err.statusCode || 500).json({
+  const statusCode = err.statusCode || 500;
+
+  res.status(statusCode).json({
     message:
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === "production" && statusCode === 500
         ? "Internal Server Error"
         : err.message,
   });
