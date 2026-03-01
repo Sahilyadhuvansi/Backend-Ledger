@@ -7,18 +7,22 @@ const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 
 const register = asyncHandler(async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, username } = req.body;
 
-  if (!email || !password || !name) {
+  if (!email || !password || !name || !username) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const isExists = await User.findOne({ email });
+  const isExists = await User.findOne({ $or: [{ email }, { username }] });
   if (isExists) {
-    throw new ApiError(409, "User already exists with this email");
+    if (isExists.email === email) {
+      throw new ApiError(409, "User already exists with this email");
+    } else {
+      throw new ApiError(409, "Username is already taken");
+    }
   }
 
-  const user = await User.create({ email, password, name });
+  const user = await User.create({ email, password, name, username });
 
   // Free 500 Rupees Registration Bonus for the first 10 users only!
   const totalUsers = await User.countDocuments();
@@ -65,7 +69,15 @@ const register = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         201,
-        { user: { _id: user._id, email: user.email, name: user.name }, token },
+        {
+          user: {
+            _id: user._id,
+            email: user.email,
+            name: user.name,
+            username: user.username,
+          },
+          token,
+        },
         `User registered successfully${getsBonus ? ". Added 500 INR Initial Bonus!" : ""}`,
       ),
     );
@@ -106,7 +118,15 @@ const login = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { user: { _id: user._id, email: user.email, name: user.name }, token },
+        {
+          user: {
+            _id: user._id,
+            email: user.email,
+            name: user.name,
+            username: user.username,
+          },
+          token,
+        },
         "Login successful",
       ),
     );

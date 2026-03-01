@@ -194,13 +194,13 @@ const Transfer = () => {
         <div className="space-y-6 bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-100">
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-800 ml-1">
-              Recipient Ledger ID
+              Recipient Username or Ledger ID
             </label>
             <div className="relative group">
               <input
                 type="text"
                 required
-                placeholder="Ex: 60d5ec..."
+                placeholder="Ex: johndoe or 60d5ec..."
                 className="input-field !pl-12 h-14 bg-white"
                 value={formData.toAccount}
                 onChange={(e) =>
@@ -210,7 +210,7 @@ const Transfer = () => {
               <Users className="absolute left-4 top-4 w-6 h-6 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
             </div>
             <p className="text-xs text-slate-500 ml-2 mt-1">
-              Double check the Ledger ID before transmitting.
+              Double check the Username or Ledger ID before transmitting.
             </p>
           </div>
 

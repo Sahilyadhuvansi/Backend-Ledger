@@ -14,6 +14,7 @@ import {
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
   });
@@ -27,7 +28,12 @@ const Register = () => {
     setLoading(true);
     setError("");
     try {
-      await register(formData.name, formData.email, formData.password);
+      await register(
+        formData.name,
+        formData.username,
+        formData.email,
+        formData.password,
+      );
       navigate("/dashboard");
     } catch (err) {
       setError(
@@ -90,6 +96,27 @@ const Register = () => {
                   }
                 />
                 <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-slate-700 ml-1">
+                Unique Username
+              </label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  required
+                  placeholder="johndoe123"
+                  className="input-field !pl-12"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
+                />
+                <div className="absolute left-4 top-3.5 w-5 h-5 flex items-center justify-center font-bold text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  @
+                </div>
               </div>
             </div>
 
