@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
@@ -9,7 +9,6 @@ import {
   TrendingUp,
   ShieldCheck,
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
 
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
@@ -45,25 +44,23 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tight mb-2">
-            Financial Hub
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            Accounts Overview
           </h1>
-          <p className="text-slate-400 font-medium tracking-tight">
-            Manage your digital assets and track transaction flows in real-time.
+          <p className="text-slate-500 font-medium">
+            Manage your digital assets and track transaction flows securely.
           </p>
         </div>
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={createAccount}
-          className="btn-primary group flex items-center gap-2 pr-6 shadow-2xl shadow-indigo-500/20"
+          className="btn-primary w-auto sm:w-auto px-6"
         >
-          <div className="bg-white/20 p-1.5 rounded-lg">
-            <Plus className="w-5 h-5" />
-          </div>
-          <span className="font-bold">New Account</span>
+          <Plus className="w-5 h-5" />
+          <span>New Account</span>
         </motion.button>
       </header>
 
@@ -73,10 +70,10 @@ const Dashboard = () => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-2xl flex items-center gap-3"
+            className="bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 border border-red-100 font-medium mb-6"
           >
-            <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div>
-            <span className="font-bold">{error}</span>
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+            <span>{error}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -86,7 +83,7 @@ const Dashboard = () => {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-56 rounded-3xl animate-pulse bg-white/5 border border-white/5 shadow-inner"
+              className="h-56 rounded-2xl bg-slate-50 border border-slate-100 animate-pulse"
             ></div>
           ))}
         </div>
@@ -95,23 +92,21 @@ const Dashboard = () => {
           {accounts.map((account, index) => (
             <motion.div
               key={account._id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
-              className="p-8 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all relative overflow-hidden flex flex-col justify-between min-h-[16rem] group shadow-xl"
+              whileHover={{ y: -4, scale: 1.01 }}
+              className="p-8 rounded-3xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100 transition-all flex flex-col justify-between min-h-[16rem] group"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/20 transition-colors"></div>
-
               <div className="flex items-start justify-between">
-                <div className="p-3 bg-indigo-500/20 rounded-2xl ring-1 ring-white/10 group-hover:ring-indigo-500/40 transition-all">
-                  <Wallet className="w-6 h-6 text-indigo-400" />
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl ring-1 ring-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Wallet className="w-6 h-6" />
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                     account.status === "active"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-slate-500/10 text-slate-400 border-white/5"
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                      : "bg-slate-50 text-slate-500 border-slate-200"
                   }`}
                 >
                   {account.status}
@@ -119,30 +114,30 @@ const Dashboard = () => {
               </div>
 
               <div>
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+                <p className="text-slate-500 text-sm font-semibold mb-2">
                   Verified Balance
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-white">
+                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
                     {account.balance.toLocaleString()}
                   </span>
-                  <span className="text-slate-500 font-bold text-xs uppercase">
+                  <span className="text-slate-500 font-bold text-sm uppercase">
                     {account.currency}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 mt-6 border-t border-white/5 pt-5">
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-black uppercase tracking-wider">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="flex items-center justify-between mt-6 border-t border-slate-100 pt-5">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold uppercase tracking-wide">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   <span>Secured Vault</span>
                 </div>
                 <button
                   onClick={() => navigate(`/accounts/${account._id}`)}
-                  className="flex items-center gap-1.5 text-indigo-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest group/btn"
+                  className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-bold uppercase tracking-wide group/btn"
                 >
                   Inspect
-                  <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                 </button>
               </div>
             </motion.div>
@@ -152,18 +147,18 @@ const Dashboard = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="col-span-full py-24 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer hover:border-indigo-500/30 hover:bg-indigo-500/[0.02] transition-all"
+              className="col-span-full py-20 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-all"
               onClick={createAccount}
             >
-              <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ring-1 ring-white/10">
-                <TrendingUp className="w-10 h-10 text-slate-600 group-hover:text-indigo-500 transition-colors" />
+              <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-8 h-8 text-slate-400 group-hover:text-indigo-600 transition-colors" />
               </div>
-              <h3 className="text-2xl font-black text-white mb-2">
+              <h3 className="text-xl font-bold text-slate-800 mb-2">
                 No active accounts
               </h3>
-              <p className="text-slate-400 max-w-xs px-4 text-sm font-medium">
-                Establish your first ledger entry to begin professional asset
-                management.
+              <p className="text-slate-500 max-w-sm px-4 text-sm">
+                Click this section to establish your first ledger and begin
+                managing your digital assets professionally.
               </p>
             </motion.div>
           )}
