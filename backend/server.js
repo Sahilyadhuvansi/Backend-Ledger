@@ -1,15 +1,16 @@
 require("dotenv").config();
+const app = require("./app");
+const connectToDB = require("./config/db");
 
-const dns = require("node:dns");
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
-const app = require("./src/app");
-const connectToDB = require("./src/config/db");
-
+// Database connection
 connectToDB();
 
-const PORT = process.env.PORT || 3000;
+// Start server for local development
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running locally on http://localhost:${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = app;
