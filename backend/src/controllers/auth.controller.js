@@ -64,23 +64,21 @@ const register = asyncHandler(async (req, res) => {
     console.error("Email sending failed:", err.message),
   );
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(
-        201,
-        {
-          user: {
-            _id: user._id,
-            email: user.email,
-            name: user.name,
-            username: user.username,
-          },
-          token,
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
         },
-        `User registered successfully${getsBonus ? ". Added 500 INR Initial Bonus!" : ""}`,
-      ),
-    );
+        token,
+      },
+      `User registered successfully${getsBonus ? ". Added 500 INR Initial Bonus!" : ""}`,
+    ),
+  );
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -113,23 +111,21 @@ const login = asyncHandler(async (req, res) => {
 
   res.cookie("token", token, cookieOptions);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          user: {
-            _id: user._id,
-            email: user.email,
-            name: user.name,
-            username: user.username,
-          },
-          token,
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
         },
-        "Login successful",
-      ),
-    );
+        token,
+      },
+      "Login successful",
+    ),
+  );
 });
 
 const logout = asyncHandler(async (req, res) => {

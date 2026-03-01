@@ -1,6 +1,7 @@
 const Transaction = require("../models/transaction.model");
 const Ledger = require("../models/ledger.model");
 const Account = require("../models/account.model");
+const User = require("../models/user.model");
 const {
   sendTransactionConfirmationEmail,
 } = require("../services/email.service");
@@ -16,21 +17,42 @@ const createTransaction = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Missing required fields");
   }
 
-  if (fromAccount === toAccount) {
+  // 1. Check if `toAccount` is an ObjectId or Username
+  let recipientAccountId = toAccount;
+
+  if (!mongoose.Types.ObjectId.isValid(toAccount)) {
+    // Treat `toAccount` as a username since it's not a valid Account ID
+    const recipientUser = await User.findOne({
+      username: toAccount.toLowerCase(),
+    });
+    if (!recipientUser) {
+      throw new ApiError(
+        404,
+        "Recipient not found. Please verify the Username or Ledger ID.",
+      );
+    }
+    const recipientAccount = await Account.findOne({
+      user: recipientUser._id,
+      status: "active",
+    });
+    if (!recipientAccount) {
+      throw new ApiError(
+        404,
+        "Recipient does not have an active Ledger account.",
+      );
+    }
+    recipientAccountId = recipientAccount._id;
+  }
+
+  if (fromAccount.toString() === recipientAccountId.toString()) {
     throw new ApiError(400, "Cannot transfer to the same account");
   }
 
-  if (
-    !mongoose.Types.ObjectId.isValid(fromAccount) ||
-    !mongoose.Types.ObjectId.isValid(toAccount)
-  ) {
-    throw new ApiError(
-      400,
-      "Invalid Account ID format. Please ensure you are sending to a valid Ledger ID.",
-    );
+  if (!mongoose.Types.ObjectId.isValid(fromAccount)) {
+    throw new ApiError(400, "Invalid Source Account ID format.");
   }
 
-  // 1. Check for existing transaction (idempotency)
+  // 2. Check for existing transaction (idempotency)
   const existingTransaction = await Transaction.findOne({ idempotencyKey });
   if (existingTransaction) {
     return res
@@ -44,7 +66,7 @@ const createTransaction = asyncHandler(async (req, res) => {
       );
   }
 
-  // 2. Start ACID Session
+  // 3. Start ACID Session
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -53,7 +75,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     const fromAccountDoc = await Account.findById(fromAccount)
       .session(session)
       .populate("user");
-    const toAccountDoc = await Account.findById(toAccount)
+    const toAccountDoc = await Account.findById(recipientAccountId)
       .session(session)
       .populate("user");
 
@@ -75,7 +97,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     // 3. Create Transaction Record
     const transaction = new Transaction({
       fromAccount,
-      toAccount,
+      toAccount: recipientAccountId,
       amount,
       idempotencyKey,
       status: "pending",
@@ -90,23 +112,22 @@ const createTransaction = asyncHandler(async (req, res) => {
     await toAccountDoc.save({ session });
 
     // 5. Create Ledger Records (immutable trail)
-    await Ledger.create(
-      [
-        {
-          account: fromAccount,
-          amount,
-          transaction: transaction._id,
-          type: "debit",
-        },
-        {
-          account: toAccount,
-          amount,
-          transaction: transaction._id,
-          type: "credit",
-        },
-      ],
-      { session },
-    );
+    const debitEntry = new Ledger({
+      account: fromAccount,
+      amount,
+      transaction: transaction._id,
+      type: "debit",
+    });
+
+    const creditEntry = new Ledger({
+      account: recipientAccountId,
+      amount,
+      transaction: transaction._id,
+      type: "credit",
+    });
+
+    await debitEntry.save({ session });
+    await creditEntry.save({ session });
 
     // 6. Complete Transaction
     transaction.status = "completed";
@@ -162,39 +183,33 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
 
   try {
     // 1. Create Transaction Document
-    const transaction = (
-      await Transaction.create(
-        [
-          {
-            fromAccount: systemAccount._id,
-            toAccount: toUserAccount._id,
-            amount,
-            idempotencyKey,
-            status: "pending",
-          },
-        ],
-        { session },
-      )
-    )[0];
+    const transaction = new Transaction({
+      fromAccount: systemAccount._id,
+      toAccount: toUserAccount._id,
+      amount,
+      idempotencyKey,
+      status: "pending",
+    });
+
+    await transaction.save({ session });
 
     // 2. Create Ledger Entries
-    await Ledger.create(
-      [
-        {
-          account: systemAccount._id,
-          amount,
-          transaction: transaction._id,
-          type: "debit",
-        },
-        {
-          account: toUserAccount._id,
-          amount,
-          transaction: transaction._id,
-          type: "credit",
-        },
-      ],
-      { session },
-    );
+    const debitEntry = new Ledger({
+      account: systemAccount._id,
+      amount,
+      transaction: transaction._id,
+      type: "debit",
+    });
+
+    const creditEntry = new Ledger({
+      account: toUserAccount._id,
+      amount,
+      transaction: transaction._id,
+      type: "credit",
+    });
+
+    await debitEntry.save({ session });
+    await creditEntry.save({ session });
 
     // 3. Update Balance (Optional: if you want to keep running balance in Account model)
     systemAccount.balance -= amount;
