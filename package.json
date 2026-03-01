@@ -6,6 +6,8 @@
     "node": ">=18.x"
   },
   "scripts": {
+    "start": "node backend/src/index.js",
+    "dev": "cd backend && nodemon src/index.js",
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm install && npm run build",

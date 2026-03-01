@@ -5,4 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    port: 5001,
+  },
+  build: {
+    sourcemap: false, // Disable sourcemaps in production to avoid eval() in CSP
+  },
 });

@@ -1,8 +1,6 @@
 const mongoose = require("mongoose");
-const validateEnv = require("./validateEnv");
 
 async function connectToDB() {
-  validateEnv();
   const MONGO_URI = process.env.MONGO_URI;
   if (mongoose.connection.readyState >= 1) {
     console.log("\u2705 Using existing database connection");
