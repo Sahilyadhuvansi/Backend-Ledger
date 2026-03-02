@@ -11,10 +11,19 @@ const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
 
 const createTransaction = asyncHandler(async (req, res) => {
-  const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
+  let { fromAccount, toAccount, amount, idempotencyKey } = req.body;
 
-  if (!fromAccount || !toAccount || !amount || !idempotencyKey) {
-    throw new ApiError(400, "Missing required fields");
+  amount = Number(amount);
+
+  if (
+    !fromAccount ||
+    !toAccount ||
+    !amount ||
+    isNaN(amount) ||
+    amount <= 0 ||
+    !idempotencyKey
+  ) {
+    throw new ApiError(400, "Missing or invalid required fields");
   }
 
   // 1. Check if `toAccount` is an ObjectId or Username
