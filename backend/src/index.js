@@ -26,17 +26,24 @@ requiredEnv.forEach((key) => {
 });
 
 let dbError = null;
+let cachedPromise = null;
 
 const connectDB = async () => {
-  try {
-    if (mongoose.connection.readyState === 1) return;
+  if (mongoose.connection.readyState === 1) return;
 
-    await mongoose.connect(process.env.MONGO_URI, {
+  if (cachedPromise) {
+    await cachedPromise;
+    return;
+  }
+
+  try {
+    cachedPromise = mongoose.connect(process.env.MONGO_URI, {
       autoIndex: process.env.NODE_ENV !== "production",
     });
-
+    await cachedPromise;
     console.log("✅ MongoDB connected");
   } catch (err) {
+    cachedPromise = null;
     dbError = err.message;
     console.error("❌ MongoDB connection failed:", err.message);
 
@@ -137,6 +144,11 @@ app.get("/health", (req, res) => {
     dbError,
     timestamp: new Date().toISOString(),
   });
+});
+
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
 });
 
 app.use("/api/auth", authRoutes);
