@@ -1,10 +1,12 @@
-const User = require("../models/user.model");
-const tokenBlacklistModel = require("../models/blacklist.model");
+const User = require("../users/user.model");
+const tokenBlacklistModel = require("./blacklist.model");
 const jwt = require("jsonwebtoken");
-const { sendRegistrationEmail } = require("../services/email.service");
-const asyncHandler = require("../utils/asyncHandler");
-const ApiError = require("../utils/ApiError");
-const ApiResponse = require("../utils/ApiResponse");
+const {
+  sendRegistrationEmail,
+} = require("../../common/services/email.service");
+const asyncHandler = require("../../common/utils/asyncHandler");
+const ApiError = require("../../common/utils/ApiError");
+const ApiResponse = require("../../common/utils/ApiResponse");
 
 const register = asyncHandler(async (req, res) => {
   const { email, password, name, username } = req.body;
@@ -28,8 +30,8 @@ const register = asyncHandler(async (req, res) => {
   const totalUsers = await User.countDocuments();
   const getsBonus = totalUsers <= 10;
 
-  const Account = require("../models/account.model");
-  const Ledger = require("../models/ledger.model");
+  const Account = require("../accounts/account.model");
+  const Ledger = require("../accounts/ledger.model");
 
   const userAccount = await Account.create({
     user: user._id,

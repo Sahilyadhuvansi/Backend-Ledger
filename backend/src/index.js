@@ -1,8 +1,5 @@
 require("dotenv").config();
 
-const dns = require("node:dns");
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -15,9 +12,9 @@ const morgan = require("morgan");
 const mongoose = require("mongoose");
 
 // Routers
-const authRoutes = require("./routes/auth.routes");
-const accountRoutes = require("./routes/account.routes");
-const transactionRoutes = require("./routes/transaction.routes");
+const authRoutes = require("./modules/auth/auth.routes");
+const accountRoutes = require("./modules/accounts/account.routes");
+const transactionRoutes = require("./modules/transactions/transaction.routes");
 
 const requiredEnv = ["JWT_SECRET", "MONGO_URI"];
 requiredEnv.forEach((key) => {

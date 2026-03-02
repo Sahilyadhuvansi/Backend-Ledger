@@ -1,5 +1,5 @@
-const User = require("../models/user.model");
-const tokenBlacklistModel = require("../models/blacklist.model");
+const User = require("../../modules/users/user.model");
+const tokenBlacklistModel = require("../../modules/auth/blacklist.model");
 const jwt = require("jsonwebtoken");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");

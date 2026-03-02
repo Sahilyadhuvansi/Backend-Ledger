@@ -2,9 +2,9 @@ const express = require("express");
 const {
   protect,
   restrictToSystemUser,
-} = require("../middleware/auth.middleware");
-const accountController = require("../controllers/account.controller");
-const transactionController = require("../controllers/transaction.controller");
+} = require("../../common/middleware/auth.middleware");
+const accountController = require("./account.controller");
+const transactionController = require("../transactions/transaction.controller");
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
-const Account = require("../models/account.model");
-const asyncHandler = require("../utils/asyncHandler");
-const ApiError = require("../utils/ApiError");
-const ApiResponse = require("../utils/ApiResponse");
+const Account = require("./account.model");
+const asyncHandler = require("../../common/utils/asyncHandler");
+const ApiError = require("../../common/utils/ApiError");
+const ApiResponse = require("../../common/utils/ApiResponse");
 
 const createAccount = asyncHandler(async (req, res) => {
   const { currency } = req.body;
@@ -23,7 +23,7 @@ const getAccounts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, accounts, "Accounts fetched successfully"));
 });
 
-const Ledger = require("../models/ledger.model");
+const Ledger = require("./ledger.model");
 
 const getAccountDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;

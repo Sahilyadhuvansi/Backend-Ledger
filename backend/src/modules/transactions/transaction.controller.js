@@ -1,14 +1,14 @@
-const Transaction = require("../models/transaction.model");
-const Ledger = require("../models/ledger.model");
-const Account = require("../models/account.model");
-const User = require("../models/user.model");
+const Transaction = require("./transaction.model");
+const Ledger = require("../accounts/ledger.model");
+const Account = require("../accounts/account.model");
+const User = require("../users/user.model");
 const {
   sendTransactionConfirmationEmail,
-} = require("../services/email.service");
+} = require("../../common/services/email.service");
 const mongoose = require("mongoose");
-const asyncHandler = require("../utils/asyncHandler");
-const ApiError = require("../utils/ApiError");
-const ApiResponse = require("../utils/ApiResponse");
+const asyncHandler = require("../../common/utils/asyncHandler");
+const ApiError = require("../../common/utils/ApiError");
+const ApiResponse = require("../../common/utils/ApiResponse");
 
 const createTransaction = asyncHandler(async (req, res) => {
   let { fromAccount, toAccount, amount, idempotencyKey } = req.body;
