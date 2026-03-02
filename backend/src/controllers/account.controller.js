@@ -23,6 +23,8 @@ const getAccounts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, accounts, "Accounts fetched successfully"));
 });
 
+const Ledger = require("../models/ledger.model");
+
 const getAccountDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const account = await Account.findOne({ _id: id, user: req.user._id });
@@ -33,12 +35,18 @@ const getAccountDetails = asyncHandler(async (req, res) => {
 
   const balance = await account.calculateCurrentBalance();
 
+  const recentTransactions = await Ledger.find({ account: id })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .populate("transaction");
+
   return res.status(200).json(
     new ApiResponse(
       200,
       {
         ...account.toObject(),
         calculatedBalance: balance,
+        recentTransactions,
       },
       "Account details fetched successfully",
     ),

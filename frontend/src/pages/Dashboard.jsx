@@ -8,6 +8,7 @@ import {
   ArrowRight,
   TrendingUp,
   ShieldCheck,
+  Send,
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -53,15 +54,28 @@ const Dashboard = () => {
             Manage your digital assets and track transaction flows securely.
           </p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={createAccount}
-          className="btn-primary w-auto sm:w-auto px-6"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Account</span>
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate("/transfer")}
+            className="btn-primary w-auto sm:w-auto px-5 bg-slate-800 hover:bg-slate-900 shadow-slate-800/20 shadow-sm border border-slate-700 font-bold"
+          >
+            <Send className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+            <span className="hidden sm:inline">Transfer</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={createAccount}
+            className="btn-primary w-auto sm:w-auto px-5"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">New Account</span>
+            <span className="sm:hidden">New</span>
+          </motion.button>
+        </div>
       </header>
 
       <AnimatePresence>
