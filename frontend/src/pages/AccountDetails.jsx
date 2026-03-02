@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import { useSocket } from "../context/SocketContext";
 import {
   ArrowLeft,
   Wallet,
@@ -19,6 +20,7 @@ const AccountDetails = () => {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { lastUpdate } = useSocket();
 
   const fetchDetails = useCallback(async () => {
     try {
@@ -33,7 +35,7 @@ const AccountDetails = () => {
 
   useEffect(() => {
     fetchDetails();
-  }, [fetchDetails]);
+  }, [fetchDetails, lastUpdate]);
 
   if (loading)
     return (

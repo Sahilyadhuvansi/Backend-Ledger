@@ -8,6 +8,7 @@ const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   useEffect(() => {
     // Determine the correct backend URL for Socket.io
@@ -33,6 +34,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on("new_transaction", (data) => {
+      setLastUpdate(Date.now());
       toast.success(data.message, {
         duration: 6000,
         position: "top-right",
@@ -48,6 +50,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on("transaction_sent", (data) => {
+      setLastUpdate(Date.now());
       toast.success(data.message, {
         duration: 6000,
         position: "top-right",
@@ -70,7 +73,7 @@ export const SocketProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <SocketContext.Provider value={{ socket }}>
+    <SocketContext.Provider value={{ socket, lastUpdate }}>
       {children}
     </SocketContext.Provider>
   );

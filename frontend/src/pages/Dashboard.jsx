@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import { useSocket } from "../context/SocketContext";
 import {
   Plus,
   Wallet,
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { lastUpdate } = useSocket();
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -30,7 +32,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchAccounts();
-  }, [fetchAccounts]);
+  }, [fetchAccounts, lastUpdate]);
 
   const createAccount = async () => {
     try {
