@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
-import api from "../utils/api";
+import api from "../../core/utils/api";
 import {
   Send,
   ArrowRight,

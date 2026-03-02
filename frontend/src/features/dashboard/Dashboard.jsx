@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../utils/api";
-import { useSocket } from "../context/SocketContext";
+import api from "../../core/utils/api";
+import { useSocket } from "../../core/context/SocketContext";
 import {
   Plus,
   Wallet,

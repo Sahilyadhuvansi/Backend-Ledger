@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../utils/api";
-import { useSocket } from "../context/SocketContext";
+import api from "../../core/utils/api";
+import { useSocket } from "../../core/context/SocketContext";
 import {
   ArrowLeft,
   Wallet,

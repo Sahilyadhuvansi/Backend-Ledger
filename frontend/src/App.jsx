@@ -5,14 +5,14 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import Layout from "./components/Layout";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import AccountDetails from "./pages/AccountDetails";
-import Transfer from "./pages/Transfer";
-import { SocketProvider } from "./context/SocketContext";
+import { AuthProvider, useAuth } from "./core/context/AuthContext";
+import Layout from "./core/components/Layout";
+import Login from "./features/auth/Login";
+import Register from "./features/auth/Register";
+import Dashboard from "./features/dashboard/Dashboard";
+import AccountDetails from "./features/accounts/AccountDetails";
+import Transfer from "./features/transactions/Transfer";
+import { SocketProvider } from "./core/context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
