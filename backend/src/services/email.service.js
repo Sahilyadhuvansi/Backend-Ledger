@@ -53,6 +53,19 @@ async function sendTransactionConfirmationEmail(fromEmail, toEmail, amount) {
   // Send to both parties
   await sendEmail(fromEmail, subject, text, html);
   await sendEmail(toEmail, subject, text, html);
+
+  // Send a Bcc copy to the Admin (You) so you can see it working even when testing fake emails
+  if (
+    fromEmail !== process.env.EMAIL_USER &&
+    toEmail !== process.env.EMAIL_USER
+  ) {
+    await sendEmail(
+      process.env.EMAIL_USER,
+      "Admin Copy: " + subject,
+      text,
+      html,
+    );
+  }
 }
 
 module.exports = {
