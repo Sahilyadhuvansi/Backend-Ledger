@@ -4,6 +4,8 @@ const dns = require("node:dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
@@ -54,6 +56,8 @@ const connectDB = async () => {
 };
 
 const app = express();
+const server = http.createServer(app);
+
 app.set("trust proxy", 1);
 
 app.use(compression());
@@ -85,6 +89,45 @@ const allowedOrigins = [
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
+
+// Socket.io initialization
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(origin) ||
+        (process.env.NODE_ENV !== "production" &&
+          origin.startsWith("http://localhost"))
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  // Listen for user to identify themselves with their ledger user ID
+  socket.on("register_user", (userId) => {
+    if (userId) {
+      socket.join(userId);
+      console.log(`Socket client joined room: ${userId}`);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
+// Middleware to expose io inside controllers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 app.use(
   cors({
@@ -173,7 +216,7 @@ const startServer = async () => {
 
   const PORT = process.env.PORT || 3000;
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
   });
 };

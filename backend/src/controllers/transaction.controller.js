@@ -146,12 +146,35 @@ const createTransaction = asyncHandler(async (req, res) => {
     await session.commitTransaction();
 
     // 7. Post-transaction tasks (Async, don't block response)
-    const fromEmail = fromAccountDoc.user?.email;
-    const toEmail = toAccountDoc.user?.email;
-    if (fromEmail && toEmail) {
-      sendTransactionConfirmationEmail(fromEmail, toEmail, amount).catch((e) =>
-        console.error("Email notification failed:", e.message),
-      );
+    const fromUser = fromAccountDoc.user;
+    const toUser = toAccountDoc.user;
+
+    // Live Socket.io updates
+    if (req.io) {
+      if (toUser) {
+        req.io.to(toUser._id.toString()).emit("new_transaction", {
+          message: `You received ${amount} ${toAccountDoc.currency} from ${fromUser.username || fromUser.name}`,
+          amount,
+          currency: toAccountDoc.currency,
+          type: "credit",
+        });
+      }
+      if (fromUser) {
+        req.io.to(fromUser._id.toString()).emit("transaction_sent", {
+          message: `Successfully sent ${amount} ${fromAccountDoc.currency} to ${toUser.username || toUser.name}`,
+          amount,
+          currency: fromAccountDoc.currency,
+          type: "debit",
+        });
+      }
+    }
+
+    if (fromUser?.email && toUser?.email) {
+      sendTransactionConfirmationEmail(
+        fromUser.email,
+        toUser.email,
+        amount,
+      ).catch((e) => console.error("Email notification failed:", e.message));
     }
 
     return res

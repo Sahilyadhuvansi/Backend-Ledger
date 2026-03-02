@@ -12,6 +12,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AccountDetails from "./pages/AccountDetails";
 import Transfer from "./pages/Transfer";
+import { SocketProvider } from "./context/SocketContext";
+import { Toaster } from "react-hot-toast";
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
@@ -33,35 +35,38 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/accounts/:id"
-            element={
-              <ProtectedRoute>
-                <AccountDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transfer"
-            element={
-              <ProtectedRoute>
-                <Transfer />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-        </Routes>
+        <SocketProvider>
+          <Toaster />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/accounts/:id"
+              element={
+                <ProtectedRoute>
+                  <AccountDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/transfer"
+              element={
+                <ProtectedRoute>
+                  <Transfer />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </SocketProvider>
       </AuthProvider>
     </Router>
   );
