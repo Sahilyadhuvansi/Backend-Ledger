@@ -19,24 +19,24 @@ const Sidebar = () => {
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     {
       name: "Accounts",
-      path: "/accounts",
+      path: "/dashboard#accounts",
       icon: Wallet,
-      subItems: [{ name: "Account Details", path: "/accounts/details" }],
+      subItems: [{ name: "Account Details", path: "/accounts" }],
     },
     {
       name: "Transactions",
-      path: "/transactions",
+      path: "/dashboard#transactions",
       icon: ArrowLeftRight,
       subItems: [
-        { name: "History", path: "/transactions/history" },
+        { name: "History", path: "/dashboard#transactions" },
         { name: "Transfer", path: "/transfer" },
       ],
     },
     {
       name: "Investments",
-      path: "/investments",
+      path: "/dashboard#investments",
       icon: TrendingUp,
-      subItems: [{ name: "Deposits", path: "/investments/deposits" }],
+      subItems: [{ name: "Overview", path: "/dashboard#investments" }],
     },
     { name: "Settings", path: "/settings", icon: Settings },
   ];
@@ -50,7 +50,11 @@ const Sidebar = () => {
           </p>
           <nav className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
+              const baseItemPath = item.path.split("#")[0];
+              const itemHash = item.path.split("#")[1];
+              const isActive =
+                location.pathname === baseItemPath &&
+                location.hash === (itemHash ? `#${itemHash}` : "");
               const Icon = item.icon;
 
               return (

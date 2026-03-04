@@ -49,6 +49,26 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    const handleHashScroll = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const id = hash.replace("#", "");
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    };
+
+    // Initial check
+    handleHashScroll();
+
+    // Listen for hash changes
+    window.addEventListener("hashchange", handleHashScroll);
+    return () => window.removeEventListener("hashchange", handleHashScroll);
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [fetchData, lastUpdate]);
 
@@ -141,11 +161,16 @@ const Dashboard = () => {
 
       {/* 1. Account Overview Card (Top) */}
       {mainAccount ? (
-        <>
-          <AccountCard user={user} account={mainAccount} />
+        <div className="space-y-8 scroll-mt-24">
+          <div id="accounts" className="scroll-mt-24">
+            <AccountCard user={user} account={mainAccount} />
+          </div>
 
           {/* 2. Balance Cards (Top center) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div
+            id="balance"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 scroll-mt-24"
+          >
             <BalanceCard
               title="Available Balance"
               amount={mainAccount.balance}
@@ -162,11 +187,15 @@ const Dashboard = () => {
           </div>
 
           {/* 3. Recent Transactions Table (Middle) */}
-          <TransactionTable transactions={transactions} />
+          <div id="transactions" className="scroll-mt-24">
+            <TransactionTable transactions={transactions} />
+          </div>
 
           {/* 4. Investments / Deposits (Bottom) */}
-          <InvestmentCard />
-        </>
+          <div id="investments" className="scroll-mt-24">
+            <InvestmentCard />
+          </div>
+        </div>
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
