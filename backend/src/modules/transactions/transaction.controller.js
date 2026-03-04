@@ -272,7 +272,47 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
   }
 });
 
+const getTransactionHistory = asyncHandler(async (req, res) => {
+  const { limit = 10, page = 1 } = req.query;
+
+  // Find all accounts belonging to the user
+  const userAccounts = await Account.find({ user: req.user._id });
+  const accountIds = userAccounts.map((acc) => acc._id);
+
+  // Find transactions where user is either sender or receiver
+  const transactions = await Transaction.find({
+    $or: [
+      { fromAccount: { $in: accountIds } },
+      { toAccount: { $in: accountIds } },
+    ],
+  })
+    .sort({ createdAt: -1 })
+    .limit(Number(limit))
+    .skip((Number(page) - 1) * Number(limit))
+    .populate("fromAccount", "accountNumber")
+    .populate("toAccount", "accountNumber")
+    .lean();
+
+  // Add type (debit/credit) based on which account belongs to the user
+  const enrichedTransactions = transactions.map((tx) => {
+    const isDebit = accountIds.some(
+      (id) => id.toString() === tx.fromAccount?._id?.toString(),
+    );
+    return {
+      ...tx,
+      type: isDebit ? "debit" : "credit",
+    };
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, enrichedTransactions, "Transaction history fetched"),
+    );
+});
+
 module.exports = {
   createTransaction,
   createInitialFundsTransaction,
+  getTransactionHistory,
 };

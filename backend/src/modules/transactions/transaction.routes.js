@@ -10,4 +10,7 @@ router.use(protect);
 // Create a new transaction
 router.post("/", transactionController.createTransaction);
 
+// Get transaction history
+router.get("/history", transactionController.getTransactionHistory);
+
 module.exports = router;

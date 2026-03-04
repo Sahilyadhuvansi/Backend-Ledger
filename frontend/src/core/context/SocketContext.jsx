@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import toast from "react-hot-toast";
@@ -7,8 +13,9 @@ const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
-  const [socket, setSocket] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(() => Date.now());
+  const socketRef = useRef(null);
+  const [isSocketReady, setIsSocketReady] = useState(false);
 
   useEffect(() => {
     // Determine the correct backend URL for Socket.io
@@ -16,25 +23,42 @@ export const SocketProvider = ({ children }) => {
       ? "http://localhost:3002"
       : "https://backend-ledger-ijt0.onrender.com";
 
+    // If no user, disconnect and clean up
     if (!user) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
+      if (socketRef.current) {
+        console.log("🔌 Disconnecting socket (no user)");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsSocketReady(false);
       }
       return;
     }
 
     // Only create a new socket if we don't have one
-    // We use the 'socket' state directly since it's only modified here
-    if (socket) return;
+    if (socketRef.current) return;
 
+    console.log("🔌 Initializing new socket connection...");
     const socketInstance = io(backendUrl, {
       withCredentials: true,
       query: { userId: user._id },
+      transports: ["websocket", "polling"], // Allow both
+      reconnectionAttempts: 5,
+      reconnectionDelay: 5000,
     });
 
     socketInstance.on("connect", () => {
+      console.log("✅ Socket connected");
       socketInstance.emit("register_user", user._id);
+      setIsSocketReady(true);
+    });
+
+    socketInstance.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason);
+      if (reason === "io server disconnect") {
+        // the server has forcefully disconnected the socket, let's reconnect manually
+        socketInstance.connect();
+      }
+      setIsSocketReady(false);
     });
 
     socketInstance.on("new_transaction", (data) => {
@@ -69,16 +93,22 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
-    setSocket(socketInstance);
+    socketRef.current = socketInstance;
 
     return () => {
-      socketInstance.disconnect();
-      setSocket(null);
+      if (socketRef.current) {
+        console.log("🧹 Cleaning up socket connection...");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsSocketReady(false);
+      }
     };
-  }, [user]); // CRITICAL: Only depend on 'user', NOT 'socket' to avoid loop
+  }, [user?._id]); // Only re-run if user ID changes, NOT on AuthProvider re-renders
 
   return (
-    <SocketContext.Provider value={{ socket, lastUpdate }}>
+    <SocketContext.Provider
+      value={{ socket: socketRef.current, isReady: isSocketReady, lastUpdate }}
+    >
       {children}
     </SocketContext.Provider>
   );

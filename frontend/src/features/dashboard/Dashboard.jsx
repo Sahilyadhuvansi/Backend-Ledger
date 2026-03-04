@@ -96,8 +96,8 @@ const Dashboard = () => {
             Financial Dashboard
           </h1>
           <p className="text-slate-500 font-medium mt-1">
-            Welcome back, {user.name.split(" ")[0]}. Here's what's happening
-            with your accounts today.
+            Welcome back, {(user?.name || "User").split(" ")[0]}. Here's what's
+            happening with your accounts today.
           </p>
         </div>
 
