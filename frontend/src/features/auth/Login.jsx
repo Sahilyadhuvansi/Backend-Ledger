@@ -83,6 +83,7 @@ const Login = () => {
                   className="input-field !pl-12"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                 />
                 <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>
@@ -100,6 +101,7 @@ const Login = () => {
                   className="input-field !pl-12"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                 />
                 <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>

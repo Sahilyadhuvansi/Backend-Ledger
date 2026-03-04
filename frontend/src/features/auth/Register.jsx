@@ -94,6 +94,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
+                  autoComplete="name"
                 />
                 <User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>
@@ -113,6 +114,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, username: e.target.value })
                   }
+                  autoComplete="username"
                 />
                 <div className="absolute left-4 top-3.5 w-5 h-5 flex items-center justify-center font-bold text-slate-400 group-focus-within:text-indigo-600 transition-colors">
                   @
@@ -134,6 +136,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
+                  autoComplete="email"
                 />
                 <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>
@@ -153,6 +156,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  autoComplete="new-password"
                 />
                 <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>

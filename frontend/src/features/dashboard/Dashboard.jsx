@@ -64,7 +64,6 @@ const Dashboard = () => {
   };
 
   const mainAccount = accounts[0];
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
   if (loading) {
     return (

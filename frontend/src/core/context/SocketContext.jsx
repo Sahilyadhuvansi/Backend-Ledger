@@ -9,7 +9,7 @@ const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [lastUpdate, setLastUpdate] = useState(() => Date.now());
 
   useEffect(() => {
     // Determine the correct backend URL for Socket.io
@@ -24,6 +24,9 @@ export const SocketProvider = ({ children }) => {
       }
       return;
     }
+
+    // Only create a new socket if we don't have one or if user changed
+    if (socket) return;
 
     const socketInstance = io(backendUrl, {
       withCredentials: true,
@@ -70,8 +73,9 @@ export const SocketProvider = ({ children }) => {
 
     return () => {
       socketInstance.disconnect();
+      setSocket(null);
     };
-  }, [user]);
+  }, [user, socket]);
 
   return (
     <SocketContext.Provider value={{ socket, lastUpdate }}>

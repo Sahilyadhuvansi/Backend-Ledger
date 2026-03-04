@@ -38,6 +38,7 @@ const connectDB = async () => {
   try {
     cachedPromise = mongoose.connect(process.env.MONGO_URI, {
       autoIndex: process.env.NODE_ENV !== "production",
+      serverSelectionTimeoutMS: 5000, // 5 seconds timeout
     });
     await cachedPromise;
     console.log("✅ MongoDB connected");
@@ -191,10 +192,8 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
+// Connection optimization: MongoDB connection is handled at startup.
+// The /health endpoint can be used to monitor status.
 
 app.use("/api/auth", authRoutes);
 app.use("/api/accounts", accountRoutes);
