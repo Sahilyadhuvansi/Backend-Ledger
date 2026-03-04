@@ -54,13 +54,14 @@ const TransactionTable = ({ transactions }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {transactions.length > 0 ? (
+            {Array.isArray(transactions) && transactions.length > 0 ? (
               transactions.map((tx) => {
+                if (!tx) return null;
                 const isDebit =
                   tx.type === "debit" || tx.type === "transfer_out";
                 return (
                   <tr
-                    key={tx._id}
+                    key={tx._id || Math.random()}
                     className="hover:bg-slate-50/80 transition-all group"
                   >
                     <td className="px-6 py-5">
@@ -86,11 +87,19 @@ const TransactionTable = ({ transactions }) => {
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Clock className="w-3 h-3 text-slate-400" />
                             <span className="text-[10px] font-bold text-slate-400 uppercase">
-                              {new Date(tx.createdAt).toLocaleDateString()} •{" "}
-                              {new Date(tx.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {tx.createdAt
+                                ? new Date(tx.createdAt).toLocaleDateString()
+                                : "N/A"}{" "}
+                              •{" "}
+                              {tx.createdAt
+                                ? new Date(tx.createdAt).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )
+                                : "N/A"}
                             </span>
                           </div>
                         </div>
@@ -99,7 +108,10 @@ const TransactionTable = ({ transactions }) => {
                     <td className="px-6 py-5 hidden md:table-cell">
                       <div className="space-y-1">
                         <p className="text-xs font-mono font-bold text-slate-500 uppercase">
-                          TXN-{tx._id.slice(-8).toUpperCase()}
+                          TXN-
+                          {String(tx._id || "")
+                            .slice(-8)
+                            .toUpperCase() || "NEW"}
                         </p>
                         <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider bg-indigo-50 inline-block px-1.5 py-0.5 rounded">
                           Digital Transfer
@@ -112,7 +124,7 @@ const TransactionTable = ({ transactions }) => {
                           className={`text-sm font-extrabold ${isDebit ? "text-rose-600" : "text-emerald-600"}`}
                         >
                           {isDebit ? "-" : "+"}
-                          {tx.amount.toLocaleString()}
+                          {(tx.amount || 0).toLocaleString()}
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">
                           {tx.currency || "INR"}
@@ -127,7 +139,7 @@ const TransactionTable = ({ transactions }) => {
                             : "bg-amber-50 text-amber-600 border-amber-100"
                         }`}
                       >
-                        {tx.status}
+                        {tx.status || "pending"}
                       </span>
                     </td>
                     <td className="px-6 py-5 text-right">

@@ -24,7 +24,7 @@ export const SocketProvider = ({ children }) => {
       : "https://backend-ledger-ijt0.onrender.com";
 
     // If no user, disconnect and clean up
-    if (!user) {
+    if (!user?._id) {
       if (socketRef.current) {
         console.log("🔌 Disconnecting socket (no user)");
         socketRef.current.disconnect();
@@ -38,26 +38,30 @@ export const SocketProvider = ({ children }) => {
     if (socketRef.current) return;
 
     console.log("🔌 Initializing new socket connection...");
+
+    // Switch to websocket transport only to avoid polling floods on Render
     const socketInstance = io(backendUrl, {
       withCredentials: true,
       query: { userId: user._id },
-      transports: ["websocket", "polling"], // Allow both
+      transports: ["websocket"],
       reconnectionAttempts: 5,
       reconnectionDelay: 5000,
     });
 
     socketInstance.on("connect", () => {
-      console.log("✅ Socket connected");
+      console.log("✅ Socket connected via WebSocket");
       socketInstance.emit("register_user", user._id);
       setIsSocketReady(true);
     });
 
+    socketInstance.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err.message);
+      // If websocket fails, it won't flood polling anymore.
+      setIsSocketReady(false);
+    });
+
     socketInstance.on("disconnect", (reason) => {
       console.log("❌ Socket disconnected:", reason);
-      if (reason === "io server disconnect") {
-        // the server has forcefully disconnected the socket, let's reconnect manually
-        socketInstance.connect();
-      }
       setIsSocketReady(false);
     });
 
@@ -103,7 +107,7 @@ export const SocketProvider = ({ children }) => {
         setIsSocketReady(false);
       }
     };
-  }, [user?._id]); // Only re-run if user ID changes, NOT on AuthProvider re-renders
+  }, [user?._id]);
 
   return (
     <SocketContext.Provider
