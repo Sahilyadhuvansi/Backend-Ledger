@@ -38,7 +38,7 @@ const Sidebar = () => {
       icon: TrendingUp,
       subItems: [{ name: "Overview", path: "/dashboard#investments" }],
     },
-    { name: "Settings", path: "/settings", icon: Settings },
+    { name: "Settings", path: "/dashboard#settings", icon: Settings },
   ];
 
   return (

@@ -1,30 +1,74 @@
 @import "tailwindcss";
 
+/* ================= THEME TOKENS ================= */
+
 @theme {
   --color-primary: #4f46e5;
   --color-primary-hover: #4338ca;
-  --font-sans: "Inter", "system-ui", "-apple-system", "sans-serif";
+
+  --color-bg: #f8fafc;
+  --color-text: #0f172a;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* ================= GLOBAL ================= */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ================= AUTH ================= */
 
 .auth-card {
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
 }
 
+/* ================= INPUT ================= */
+
 .input-field {
-  @apply w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all;
+  @apply w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 
+  focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 
+  transition-all duration-200;
 }
+
+/* ================= BUTTON ================= */
 
 .btn-primary {
-  @apply w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2;
+  @apply w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold 
+  shadow-md shadow-indigo-500/20 active:scale-[0.98] 
+  flex items-center justify-center gap-2 
+  transition-all duration-200;
 }
 
+/* ================= PANELS ================= */
+
 .glass-panel {
-  @apply bg-white rounded-2xl shadow-sm border border-slate-100;
+  @apply bg-white rounded-2xl shadow-sm border border-slate-100 backdrop-blur-sm;
+}
+
+/* ================= SCROLLBAR (optional but nice) ================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5f5;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a5b4fc;
 }

@@ -138,7 +138,7 @@ const Navbar = () => {
                           My Profile
                         </Link>
                         <Link
-                          to="/settings"
+                          to="/dashboard#settings"
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
                         >
                           <Settings className="w-4 h-4" />
@@ -167,10 +167,10 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {[
             { icon: LayoutDashboard, path: "/dashboard" },
-            { icon: CreditCard, path: "/accounts" },
+            { icon: CreditCard, path: "/dashboard#accounts" },
             { icon: Send, path: "/transfer" },
-            { icon: History, path: "/transactions" },
-            { icon: Settings, path: "/settings" },
+            { icon: History, path: "/dashboard#transactions" },
+            { icon: Settings, path: "/dashboard#settings" },
           ].map((item, idx) => {
             const isActive = location.pathname.startsWith(item.path);
             const Icon = item.icon;
