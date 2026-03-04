@@ -66,10 +66,15 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "https:"],
+        styleSrc: ["'self'", "https:", "'unsafe-inline'"],
         fontSrc: ["'self'", "https:"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https:"],
+        connectSrc: [
+          "'self'",
+          "https:",
+          "http://localhost:*",
+          "ws://localhost:*",
+        ],
         objectSrc: ["'none'"],
       },
     },

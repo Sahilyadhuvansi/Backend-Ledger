@@ -3,194 +3,195 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../core/utils/api";
 import { useSocket } from "../../core/context/SocketContext";
+import { useAuth } from "../../core/context/AuthContext";
 import {
   Plus,
-  Wallet,
-  ArrowRight,
-  TrendingUp,
-  ShieldCheck,
   Send,
+  AlertCircle,
+  RefreshCw,
+  LayoutDashboard,
 } from "lucide-react";
+
+// Components
+import AccountCard from "./components/AccountCard";
+import BalanceCard from "./components/BalanceCard";
+import TransactionTable from "./components/TransactionTable";
+import InvestmentCard from "./components/InvestmentCard";
 
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { lastUpdate } = useSocket();
+  const { user } = useAuth();
 
-  const fetchAccounts = useCallback(async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
     try {
-      const { data } = await api.get("/accounts");
-      setAccounts(data.data);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      const [accountsRes, transactionsRes] = await Promise.all([
+        api.get("/accounts"),
+        api.get("/transactions/history?limit=5"),
+      ]);
+
+      setAccounts(accountsRes.data.data);
+      setTransactions(transactionsRes.data.data);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts, lastUpdate]);
+    fetchData();
+  }, [fetchData, lastUpdate]);
 
   const createAccount = async () => {
     try {
-      setLoading(true);
+      setRefreshing(true);
       await api.post("/accounts", { currency: "INR" });
-      await fetchAccounts();
+      await fetchData(true);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
-      setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const mainAccount = accounts[0];
+  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-10 w-48 bg-slate-200 rounded-lg mb-8" />
+        <div className="h-48 w-full bg-white rounded-3xl border border-slate-100" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-32 bg-white rounded-3xl border border-slate-100" />
+          <div className="h-32 bg-white rounded-3xl border border-slate-100" />
+        </div>
+        <div className="h-96 w-full bg-white rounded-3xl border border-slate-100" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+    <div className="space-y-8">
+      {/* Header Section */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Accounts Overview
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+              <LayoutDashboard className="w-4 h-4" />
+            </div>
+            <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
+              Workspace
+            </span>
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Financial Dashboard
           </h1>
-          <p className="text-slate-500 font-medium">
-            Manage your digital assets and track transaction flows securely.
+          <p className="text-slate-500 font-medium mt-1">
+            Welcome back, {user.name.split(" ")[0]}. Here's what's happening
+            with your accounts today.
           </p>
         </div>
+
         <div className="flex items-center gap-3">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate("/transfer")}
-            className="btn-primary w-auto sm:w-auto px-5 bg-slate-800 hover:bg-slate-900 shadow-slate-800/20 shadow-sm border border-slate-700 font-bold"
+            onClick={() => fetchData(true)}
+            className={`p-3 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all ${refreshing ? "animate-spin" : ""}`}
+            title="Refresh Data"
           >
-            <Send className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
-            <span className="hidden sm:inline">Transfer</span>
+            <RefreshCw className="w-5 h-5" />
           </motion.button>
 
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={createAccount}
-            className="btn-primary w-auto sm:w-auto px-5"
+            onClick={() => navigate("/transfer")}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all"
           >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">New Account</span>
-            <span className="sm:hidden">New</span>
+            <Send className="w-4 h-4 text-indigo-400" />
+            <span>Transfer Money</span>
           </motion.button>
         </div>
       </header>
 
+      {/* Error Message */}
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 border border-red-100 font-medium mb-6"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-2xl flex items-center gap-3"
           >
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
-            <span>{error}</span>
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-bold">{error}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {loading && accounts.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-56 rounded-2xl bg-slate-50 border border-slate-100 animate-pulse"
-            ></div>
-          ))}
-        </div>
+      {/* 1. Account Overview Card (Top) */}
+      {mainAccount ? (
+        <>
+          <AccountCard user={user} account={mainAccount} />
+
+          {/* 2. Balance Cards (Top center) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BalanceCard
+              title="Available Balance"
+              amount={mainAccount.balance}
+              currency={mainAccount.currency}
+              trend={2.4}
+              type="available"
+            />
+            <BalanceCard
+              title="Ledger Balance"
+              amount={mainAccount.balance + 14500} // Mocking ledger balance for demo
+              currency={mainAccount.currency}
+              type="ledger"
+            />
+          </div>
+
+          {/* 3. Recent Transactions Table (Middle) */}
+          <TransactionTable transactions={transactions} />
+
+          {/* 4. Investments / Deposits (Bottom) */}
+          <InvestmentCard />
+        </>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {accounts.map((account, index) => (
-            <motion.div
-              key={account._id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -4, scale: 1.01 }}
-              className="p-8 rounded-3xl border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100 transition-all flex flex-col justify-between min-h-[16rem] group"
-            >
-              <div className="flex items-start justify-between">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl ring-1 ring-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <Wallet className="w-6 h-6" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(account._id);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-white text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all z-10"
-                    title="Copy Ledger ID"
-                  >
-                    <span>ID: {account._id.substring(0, 8)}...</span>
-                  </button>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                      account.status === "active"
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : "bg-slate-50 text-slate-500 border-slate-200"
-                    }`}
-                  >
-                    {account.status}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-slate-500 text-sm font-semibold mb-2">
-                  Verified Balance
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                    {account.balance.toLocaleString()}
-                  </span>
-                  <span className="text-slate-500 font-bold text-sm uppercase">
-                    {account.currency}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mt-6 border-t border-slate-100 pt-5">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-bold uppercase tracking-wide">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span>Secured Vault</span>
-                </div>
-                <button
-                  onClick={() => navigate(`/accounts/${account._id}`)}
-                  className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-bold uppercase tracking-wide group/btn"
-                >
-                  Inspect
-                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-
-          {accounts.length === 0 && !loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-full py-20 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-center group cursor-pointer hover:border-indigo-400 hover:bg-slate-50 transition-all"
-              onClick={createAccount}
-            >
-              <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-8 h-8 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">
-                No active accounts
-              </h3>
-              <p className="text-slate-500 max-w-sm px-4 text-sm">
-                Click this section to establish your first ledger and begin
-                managing your digital assets professionally.
-              </p>
-            </motion.div>
-          )}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="py-24 border-2 border-dashed border-slate-200 rounded-[3rem] bg-white flex flex-col items-center justify-center text-center px-6"
+        >
+          <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mb-8">
+            <Plus className="w-10 h-10 text-indigo-600" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-slate-900 mb-3">
+            Initialize Your Ledger
+          </h2>
+          <p className="text-slate-500 max-w-sm mb-10 font-medium">
+            You don't have any active accounts yet. Create your first digital
+            ledger to start managing your assets securely.
+          </p>
+          <button
+            onClick={createAccount}
+            disabled={refreshing}
+            className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+          >
+            {refreshing ? "Creating..." : "Create New Account"}
+          </button>
+        </motion.div>
       )}
     </div>
   );
