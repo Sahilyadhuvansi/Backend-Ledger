@@ -91,7 +91,11 @@ const Dashboard = () => {
   const mainAccount = accounts?.[0] ?? null;
 
   const ledgerBalance = useMemo(() => {
-    return mainAccount ? mainAccount.balance + 14500 : 0;
+    if (!mainAccount) return 0;
+    const balance = Number(mainAccount.balance) || 0;
+    const pendingCredits = Number(mainAccount.pendingCredits) || 0;
+    const pendingDebits = Number(mainAccount.pendingDebits) || 0;
+    return balance + pendingCredits - pendingDebits;
   }, [mainAccount]);
 
   /* ================= CREATE ACCOUNT ================= */
