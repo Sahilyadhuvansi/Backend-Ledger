@@ -231,7 +231,10 @@ const AccountDetails = () => {
                     </p>
 
                     <p className="text-[10px] text-slate-400">
-                      TxID: {tx.transaction?._id?.slice(0, 8) || "N/A"}
+                      TxID:{" "}
+                      {tx.transaction?._id
+                        ? String(tx.transaction._id).slice(0, 8)
+                        : "N/A"}
                     </p>
                   </div>
                 </div>

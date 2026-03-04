@@ -88,7 +88,7 @@ const TransactionTable = ({ transactions = [] }) => {
                   tx.type === "debit" || tx.type === "transfer_out";
 
                 const txId = tx._id
-                  ? `TXN-${tx._id.slice(-8).toUpperCase()}`
+                  ? `TXN-${String(tx._id).slice(-8).toUpperCase()}`
                   : "TXN-NEW";
 
                 return (

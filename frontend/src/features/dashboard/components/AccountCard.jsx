@@ -11,7 +11,7 @@ const AccountCard = ({ user = {}, account }) => {
   if (!account) return null;
 
   const accountNumber = account?._id
-    ? `***${account._id.slice(-6).toUpperCase()}`
+    ? `***${String(account._id).slice(-6).toUpperCase()}`
     : "******";
 
   const openDate = account?.createdAt
