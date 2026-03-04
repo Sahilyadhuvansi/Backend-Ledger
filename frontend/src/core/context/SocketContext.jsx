@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
@@ -25,7 +24,8 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // Only create a new socket if we don't have one or if user changed
+    // Only create a new socket if we don't have one
+    // We use the 'socket' state directly since it's only modified here
     if (socket) return;
 
     const socketInstance = io(backendUrl, {
@@ -75,7 +75,7 @@ export const SocketProvider = ({ children }) => {
       socketInstance.disconnect();
       setSocket(null);
     };
-  }, [user, socket]);
+  }, [user]); // CRITICAL: Only depend on 'user', NOT 'socket' to avoid loop
 
   return (
     <SocketContext.Provider value={{ socket, lastUpdate }}>
