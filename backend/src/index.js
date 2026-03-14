@@ -1,5 +1,11 @@
 require("dotenv").config();
-
+const dns = require("dns");
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+  console.log("✅ Custom DNS configured");
+} catch (e) {
+  console.log("⚠️ Could not configure DNS:", e.message);
+}
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -102,7 +108,8 @@ const io = new Server(server, {
         allowedOrigins.includes("*") ||
         allowedOrigins.includes(origin) ||
         (process.env.NODE_ENV !== "production" &&
-          origin.startsWith("http://localhost"))
+          (origin.startsWith("http://localhost") ||
+            /http:\/\/(192\.168|10|172)\./.test(origin)))
       ) {
         return callback(null, true);
       }
@@ -141,7 +148,8 @@ app.use(
         allowedOrigins.includes("*") ||
         allowedOrigins.includes(origin) ||
         (process.env.NODE_ENV !== "production" &&
-          origin.startsWith("http://localhost"))
+          (origin.startsWith("http://localhost") ||
+            /http:\/\/(192\.168|10|172)\./.test(origin)))
       ) {
         return callback(null, true);
       }

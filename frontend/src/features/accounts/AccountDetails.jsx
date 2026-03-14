@@ -11,7 +11,10 @@ import {
   TrendingDown,
   TrendingUp,
   AlertTriangle,
+  Check,
+  Copy,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const AccountDetails = () => {
   const { id } = useParams();
@@ -21,6 +24,7 @@ const AccountDetails = () => {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   /* ================= FETCH ================= */
 
@@ -52,7 +56,13 @@ const AccountDetails = () => {
 
   const copyId = async () => {
     try {
-      await navigator.clipboard.writeText(account?._id || "");
+      const idStr = account?._id ? String(account._id) : "";
+      if (!idStr) return;
+      
+      await navigator.clipboard.writeText(idStr);
+      setCopied(true);
+      toast.success("Ledger ID copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       console.warn("Clipboard failed");
     }
@@ -148,9 +158,23 @@ const AccountDetails = () => {
             <div className="flex items-center gap-3 mt-3">
               <button
                 onClick={copyId}
-                className="text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-lg border border-indigo-200"
+                className={`text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg border transition-all flex items-center gap-2 ${
+                  copied
+                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-indigo-200"
+                }`}
               >
-                Copy ID
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy ID
+                  </>
+                )}
               </button>
 
               <span className="text-sm font-bold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-indigo-100">

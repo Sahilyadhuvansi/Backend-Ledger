@@ -5,14 +5,28 @@ import {
   Calendar,
   Fingerprint,
   ShieldCheck,
+  Copy,
+  Check,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 const AccountCard = ({ user = {}, account }) => {
+  const [copied, setCopied] = React.useState(false);
+
   if (!account) return null;
 
-  const accountNumber = account?._id
-    ? `***${String(account._id).slice(-6).toUpperCase()}`
+  const fullAccountNumber = account?._id ? String(account._id) : "";
+  const accountNumber = fullAccountNumber
+    ? `***${fullAccountNumber.slice(-6).toUpperCase()}`
     : "******";
+
+  const handleCopy = () => {
+    if (!fullAccountNumber) return;
+    navigator.clipboard.writeText(fullAccountNumber);
+    setCopied(true);
+    toast.success("Ledger ID copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const openDate = account?.createdAt
     ? new Date(account.createdAt).toLocaleDateString("en-IN", {
@@ -61,6 +75,17 @@ const AccountCard = ({ user = {}, account }) => {
             <span className="text-sm font-mono font-bold text-slate-700">
               {accountNumber}
             </span>
+            <button
+              onClick={handleCopy}
+              className="ml-1 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+              title="Copy full Ledger ID"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.DEV
-    ? "http://localhost:3002/api"
+    ? `http://${window.location.hostname}:3002/api`
     : "https://backend-ledger-ijt0.onrender.com/api",
   withCredentials: true,
 });

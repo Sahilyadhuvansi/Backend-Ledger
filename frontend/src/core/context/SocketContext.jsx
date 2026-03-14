@@ -3,7 +3,6 @@ import React, {
   useContext,
   useEffect,
   useState,
-  useRef,
 } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
@@ -14,28 +13,20 @@ const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [lastUpdate, setLastUpdate] = useState(() => Date.now());
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const [isSocketReady, setIsSocketReady] = useState(false);
 
   useEffect(() => {
     // Determine the correct backend URL for Socket.io
     const backendUrl = import.meta.env.DEV
-      ? "http://localhost:3002"
+      ? `http://${window.location.hostname}:3002`
       : "https://backend-ledger-ijt0.onrender.com";
 
-    // If no user, disconnect and clean up
+    // If no user, cleanup happens via the return function of the effect.
     if (!user?._id) {
-      if (socketRef.current) {
-        console.log("🔌 Disconnecting socket (no user)");
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        setIsSocketReady(false);
-      }
+      setIsSocketReady(false);
       return;
     }
-
-    // Only create a new socket if we don't have one
-    if (socketRef.current) return;
 
     console.log("🔌 Initializing new socket connection...");
 
@@ -47,6 +38,8 @@ export const SocketProvider = ({ children }) => {
       reconnectionAttempts: 5,
       reconnectionDelay: 5000,
     });
+
+    setSocket(socketInstance);
 
     socketInstance.on("connect", () => {
       console.log("✅ Socket connected via WebSocket");
@@ -97,25 +90,22 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
-    socketRef.current = socketInstance;
-
     return () => {
-      if (socketRef.current) {
-        console.log("🧹 Cleaning up socket connection...");
-        socketRef.current.disconnect();
-        socketRef.current = null;
-        setIsSocketReady(false);
-      }
+      console.log("🧹 Cleaning up socket connection...");
+      socketInstance.disconnect();
+      setSocket(null);
+      setIsSocketReady(false);
     };
   }, [user?._id]);
 
   return (
     <SocketContext.Provider
-      value={{ socket: socketRef.current, isReady: isSocketReady, lastUpdate }}
+      value={{ socket, isReady: isSocketReady, lastUpdate }}
     >
       {children}
     </SocketContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => useContext(SocketContext);

@@ -166,20 +166,40 @@ const Navbar = () => {
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-3xl px-6 py-4 shadow-2xl">
         <div className="flex items-center justify-between">
           {[
-            { icon: LayoutDashboard, path: "/dashboard" },
-            { icon: CreditCard, path: "/dashboard#accounts" },
-            { icon: Send, path: "/transfer" },
-            { icon: History, path: "/dashboard#transactions" },
-            { icon: Settings, path: "/dashboard#settings" },
+            { icon: LayoutDashboard, path: "/dashboard", hash: "" },
+            { icon: CreditCard, path: "/dashboard", hash: "accounts" },
+            { icon: Send, path: "/transfer", hash: "" },
+            { icon: History, path: "/dashboard", hash: "transactions" },
+            { icon: Settings, path: "/dashboard", hash: "settings" },
           ].map((item, idx) => {
-            const isActive = location.pathname.startsWith(item.path);
+            const currentHash = location.hash.replace("#", "");
+            const isActive =
+              location.pathname === item.path && currentHash === item.hash;
+
+            const fullPath = item.hash ? `${item.path}#${item.hash}` : item.path;
             const Icon = item.icon;
+
+            const handleClick = () => {
+              if (location.pathname === item.path && item.hash) {
+                const element = document.getElementById(item.hash);
+                if (element) {
+                  element.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }
+              if (location.pathname === item.path && !item.hash && item.path === "/dashboard") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            };
+
             return (
               <Link
                 key={idx}
-                to={item.path}
-                className={`p-2 rounded-xl transition-all ${
-                  isActive ? "bg-indigo-600 text-white" : "text-slate-400"
+                to={fullPath}
+                onClick={handleClick}
+                className={`p-2.5 rounded-xl transition-all ${
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+                    : "text-slate-400 hover:text-indigo-500 hover:bg-indigo-50"
                 }`}
               >
                 <Icon className="w-5 h-5" />
