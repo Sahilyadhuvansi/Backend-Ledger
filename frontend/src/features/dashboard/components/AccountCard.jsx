@@ -57,11 +57,18 @@ const AccountCard = ({ user = {}, account }) => {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             Account Holder
           </p>
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-indigo-500" />
-            <span className="text-sm font-bold text-slate-700">
-              {user?.name || "User"}
-            </span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-bold text-slate-700">
+                {user?.name || "User"}
+              </span>
+            </div>
+            {user?.username && (
+              <span className="text-[11px] font-medium text-slate-400 ml-6">
+                @{user.username}
+              </span>
+            )}
           </div>
         </div>
 

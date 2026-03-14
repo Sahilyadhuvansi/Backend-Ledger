@@ -9,8 +9,10 @@ import {
   Users,
 } from "lucide-react";
 import { fetchAccounts, handleTransfer } from "./services/transferService";
+import { useAuth } from "../../core/context/AuthContext";
 
 const Transfer = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     fromAccount: "",
     toAccount: "",
@@ -136,9 +138,16 @@ const Transfer = () => {
 
         <div className="space-y-6 bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-100">
           <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-800 ml-1">
-              Recipient Username or Ledger ID
-            </label>
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-sm font-bold text-slate-800">
+                Recipient Username or Ledger ID
+              </label>
+              {user?.username && (
+                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 uppercase tracking-tighter">
+                  Your ID: @{user.username}
+                </span>
+              )}
+            </div>
             <div className="relative group">
               <input
                 type="text"

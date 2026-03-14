@@ -150,8 +150,12 @@ const Dashboard = () => {
           </h1>
 
           <p className="text-slate-500 font-medium mt-1">
-            Welcome back, {(user?.name || "User").split(" ")[0]}. Here's what's
-            happening with your accounts today.
+            Welcome back, {(user?.name || "User").split(" ")[0]}
+            {user?.username && (
+              <span className="text-slate-400 font-normal ml-1 text-sm">
+                (@{user.username})
+              </span>
+            )}. Here's what's happening with your accounts today.
           </p>
         </div>
 

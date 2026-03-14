@@ -109,8 +109,8 @@ const Navbar = () => {
                     <p className="text-sm font-bold text-slate-800 leading-none">
                       {user.name}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">
-                      Premium Member
+                    <p className="text-[10px] text-indigo-600 font-bold uppercase mt-1 tracking-wider">
+                      @{user.username || "user"}
                     </p>
                   </div>
                   <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center border border-indigo-100/50">
