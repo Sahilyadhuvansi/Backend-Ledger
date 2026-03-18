@@ -5,14 +5,14 @@ const InvestmentCard = () => {
   const investments = [
     {
       id: 1,
-      type: "Fixed Deposit",
+      type: "Secured Fixed Deposit",
       rate: 7.5,
       maturity: "12 Dec 2026",
       amount: 500000,
     },
     {
       id: 2,
-      type: "Mutual Funds",
+      type: "Diversified Mutual Funds",
       rate: 12.2,
       maturity: "N/A",
       amount: 250000,
@@ -20,67 +20,67 @@ const InvestmentCard = () => {
   ];
 
   return (
-    <div className="bg-white border border-slate-200/60 rounded-3xl overflow-hidden shadow-sm">
+    <div className="card overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-            <TrendingUp className="w-5 h-5" />
+          <div className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg shadow-sm">
+            <TrendingUp className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-              Investments & Deposits
+            <h3 className="text-base font-bold text-slate-900 leading-tight">
+              Managed Investment Portfolio
             </h3>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
-              Your portfolio growth
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+              Active wealth allocations
             </p>
           </div>
         </div>
 
-        <button className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">
-          Explore Markets
+        <button className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-900 transition-colors">
+          Audit Portfolio
         </button>
       </div>
 
       {/* Investment Grid */}
       <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {investments.map((inv) => (
             <div
               key={inv.id}
-              className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-violet-100 hover:shadow-lg hover:shadow-violet-100/20 transition-all group"
+              className="p-5 rounded-xl border border-slate-100 bg-slate-50/20 hover:bg-slate-50/50 transition-all"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white border border-slate-100 rounded-lg flex items-center justify-center text-violet-600">
-                    <PieChart className="w-4 h-4" />
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-white border border-slate-200 rounded flex items-center justify-center text-slate-500 shadow-sm">
+                    <PieChart className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">
+                  <span className="text-sm font-bold text-slate-800">
                     {inv.type}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">
-                  {inv.rate}% P.A.
+                <div className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
+                   {inv.rate}% APR
                 </div>
               </div>
 
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                    Estimated Value
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-2">
+                    Principal Allocation
                   </p>
-                  <p className="text-sm font-extrabold text-slate-900">
+                  <p className="text-lg font-bold text-slate-900 leading-none">
                     ₹{inv.amount.toLocaleString("en-IN")}
                   </p>
                 </div>
 
                 <div className="text-right">
-                  <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                    <Calendar className="w-2.5 h-2.5" />
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 overflow-hidden">
+                    <Calendar className="w-2.5 h-2.5 flex-shrink-0" />
                     Maturity
                   </div>
-                  <p className="text-[10px] font-bold text-slate-700">
+                  <p className="text-[10px] font-bold text-slate-600 leading-none">
                     {inv.maturity}
                   </p>
                 </div>
@@ -89,22 +89,20 @@ const InvestmentCard = () => {
           ))}
         </div>
 
-        {/* Investment Offer Banner */}
-        <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-700 text-white flex items-center justify-between shadow-lg shadow-indigo-100 relative overflow-hidden">
-          <div className="relative z-10">
-            <h4 className="text-xs font-bold mb-1">
-              New Investment Opportunity
+        {/* Opportunity Card (Minimalist) */}
+        <div className="mt-6 p-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/30 flex items-center justify-between group cursor-pointer hover:border-slate-300 transition-all">
+          <div>
+            <h4 className="text-xs font-bold text-slate-800 mb-1">
+              New Capital Allocation Opportunity
             </h4>
-            <p className="text-[10px] opacity-80 font-medium">
-              Earn up to 8.5% on Fixed Deposits. Limited time only!
+            <p className="text-[10px] text-slate-500 font-medium">
+              Fixed deposits yielding up to 8.50% p.a. available for secure ledger placement.
             </p>
           </div>
 
-          <button className="relative z-10 p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all group">
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+          <div className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 group-hover:text-slate-900 group-hover:border-slate-300 transition-all shadow-sm">
+            <ArrowRight className="w-4 h-4" />
+          </div>
         </div>
       </div>
     </div>
@@ -112,3 +110,4 @@ const InvestmentCard = () => {
 };
 
 export default InvestmentCard;
+
