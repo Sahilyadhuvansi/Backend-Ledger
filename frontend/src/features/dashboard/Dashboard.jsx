@@ -43,7 +43,7 @@ const Dashboard = () => {
       ]);
 
       setAccounts(accountsRes?.data?.data || []);
-      setTransactions(transactionsRes?.data?.data || []);
+      setTransactions(transactionsRes?.data?.data?.transactions || []);
     } catch (err) {
       setError(err?.response?.data?.message || err.message);
     } finally {
