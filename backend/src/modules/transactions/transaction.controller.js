@@ -108,7 +108,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     // ── Create transaction record ──
     const [transaction] = await Transaction.create(
       [{ fromAccount, toAccount: toAccountDoc._id, amount, idempotencyKey, status: "pending" }],
-      { session }
+      { session, ordered: true }
     );
 
     // ── Update balances ──
@@ -123,7 +123,7 @@ const createTransaction = asyncHandler(async (req, res) => {
         { account: fromAccountDoc._id, amount, transaction: transaction._id, type: "debit" },
         { account: toAccountDoc._id, amount, transaction: transaction._id, type: "credit" },
       ],
-      { session }
+      { session, ordered: true }
     );
 
     // ── Complete transaction ──
@@ -188,7 +188,7 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
   try {
     const [transaction] = await Transaction.create(
       [{ fromAccount: systemAccount._id, toAccount: toUserAccount._id, amount, idempotencyKey, status: "pending" }],
-      { session }
+      { session, ordered: true }
     );
 
     await Ledger.create(
@@ -196,7 +196,7 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
         { account: systemAccount._id, amount, transaction: transaction._id, type: "debit" },
         { account: toUserAccount._id, amount, transaction: transaction._id, type: "credit" },
       ],
-      { session }
+      { session, ordered: true }
     );
 
     systemAccount.balance -= amount;
