@@ -1,4 +1,8 @@
 require("dotenv").config();
+const dns = require('node:dns');
+
+// Configure Google DNS to prevent resolution issues with MongoDB Atlas or other external services
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const express = require("express");
 const http = require("http");

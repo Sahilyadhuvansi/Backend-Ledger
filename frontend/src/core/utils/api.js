@@ -2,7 +2,8 @@ import axios from "axios";
 
 const BASE_URL = import.meta.env.DEV
   ? `http://${window.location.hostname}:3002/api`
-  : import.meta.env.VITE_API_URL || "https://backend-ledger-ijt0.onrender.com/api";
+  : (import.meta.env.VITE_API_URL?.replace(/\/+$/, "")?.replace(/\/api$/, "") ||
+      "https://backend-ledger-ijt0.onrender.com") + "/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
