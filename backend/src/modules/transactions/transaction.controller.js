@@ -2,268 +2,164 @@ const Transaction = require("./transaction.model");
 const Ledger = require("../accounts/ledger.model");
 const Account = require("../accounts/account.model");
 const User = require("../users/user.model");
-const {
-  sendTransactionConfirmationEmail,
-} = require("../../common/services/email.service");
+const { sendTransactionConfirmationEmail } = require("../../common/services/email.service");
 const mongoose = require("mongoose");
 const asyncHandler = require("../../common/utils/asyncHandler");
 const ApiError = require("../../common/utils/ApiError");
 const ApiResponse = require("../../common/utils/ApiResponse");
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve a toAccount field: accepts either a valid Account ObjectId
+ * or a username string. Returns the resolved Account document.
+ */
+const resolveRecipientAccount = async (toAccount, session) => {
+  if (mongoose.Types.ObjectId.isValid(toAccount)) {
+    const account = await Account.findById(toAccount).session(session);
+    if (!account) throw new ApiError(404, "Recipient account not found.");
+    return account;
+  }
+
+  // Treat as username
+  const recipientUser = await User.findOne({
+    username: toAccount.replace(/^@/, "").toLowerCase(),
+  });
+  if (!recipientUser) {
+    throw new ApiError(404, "Recipient not found. Please verify the username.");
+  }
+
+  const account = await Account.findOne({
+    user: recipientUser._id,
+    status: "active",
+  }).session(session);
+
+  if (!account) {
+    throw new ApiError(404, "Recipient does not have an active account.");
+  }
+
+  return account;
+};
+
+// ─── Create Transaction ───────────────────────────────────────────────────────
 const createTransaction = asyncHandler(async (req, res) => {
   let { fromAccount, toAccount, amount, idempotencyKey } = req.body;
 
+  // ── Validate input ──
   amount = Number(amount);
-
-  if (
-    !fromAccount ||
-    !toAccount ||
-    !amount ||
-    isNaN(amount) ||
-    amount <= 0 ||
-    !idempotencyKey
-  ) {
-    throw new ApiError(400, "Missing or invalid required fields");
+  if (!fromAccount || !toAccount || !idempotencyKey) {
+    throw new ApiError(400, "fromAccount, toAccount, and idempotencyKey are required.");
   }
-
-  // 1. Check if `toAccount` is an ObjectId or Username
-  let recipientAccountId = toAccount;
-
-  if (!mongoose.Types.ObjectId.isValid(toAccount)) {
-    // Treat `toAccount` as a username since it's not a valid Account ID
-    const recipientUser = await User.findOne({
-      username: toAccount.toLowerCase(),
-    });
-    if (!recipientUser) {
-      throw new ApiError(
-        404,
-        "Recipient not found. Please verify the Username or Ledger ID.",
-      );
-    }
-    const recipientAccount = await Account.findOne({
-      user: recipientUser._id,
-      status: "active",
-    });
-    if (!recipientAccount) {
-      throw new ApiError(
-        404,
-        "Recipient does not have an active Ledger account.",
-      );
-    }
-    recipientAccountId = recipientAccount._id;
+  if (isNaN(amount) || amount <= 0) {
+    throw new ApiError(400, "Amount must be a positive number.");
   }
-
-  if (fromAccount.toString() === recipientAccountId.toString()) {
-    throw new ApiError(400, "Cannot transfer to the same account");
-  }
-
   if (!mongoose.Types.ObjectId.isValid(fromAccount)) {
-    throw new ApiError(400, "Invalid Source Account ID format.");
+    throw new ApiError(400, "Invalid source account ID format.");
   }
 
-  // 2. Check for existing transaction (idempotency)
-  const existingTransaction = await Transaction.findOne({ idempotencyKey });
-  if (existingTransaction) {
+  // ── Idempotency check (outside session for performance) ──
+  const existing = await Transaction.findOne({ idempotencyKey });
+  if (existing) {
     return res
-      .status(409)
-      .json(
-        new ApiResponse(
-          409,
-          existingTransaction,
-          "Transaction already exists with this idempotency key",
-        ),
-      );
+      .status(200)
+      .json(new ApiResponse(200, existing, "Duplicate request — transaction already processed."));
   }
 
-  // 3. Start ACID Session
+  // ── Start ACID session ──
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Find accounts within session & POPULATE user to get email
+    // Resolve recipient before locking accounts
+    const toAccountDoc = await resolveRecipientAccount(toAccount, session);
+
     const fromAccountDoc = await Account.findById(fromAccount)
       .session(session)
-      .populate("user");
-    const toAccountDoc = await Account.findById(recipientAccountId)
-      .session(session)
-      .populate("user");
+      .populate("user", "email username name");
 
-    if (!fromAccountDoc || !toAccountDoc) {
-      throw new ApiError(404, "Invalid account ID(s)");
+    if (!fromAccountDoc) throw new ApiError(404, "Source account not found.");
+
+    // Prevent self-transfer
+    if (fromAccountDoc._id.equals(toAccountDoc._id)) {
+      throw new ApiError(400, "Cannot transfer to the same account.");
     }
 
-    if (
-      fromAccountDoc.status !== "active" ||
-      toAccountDoc.status !== "active"
-    ) {
-      throw new ApiError(400, "One or more accounts are not active");
+    // Authorization: ensure the sender owns the fromAccount
+    if (!fromAccountDoc.user._id.equals(req.user._id)) {
+      throw new ApiError(403, "You do not own the source account.");
     }
 
+    // Account status checks
+    if (fromAccountDoc.status !== "active") {
+      throw new ApiError(400, "Your account is not active.");
+    }
+    if (toAccountDoc.status !== "active") {
+      throw new ApiError(400, "Recipient account is not active.");
+    }
+
+    // Balance check
     if (fromAccountDoc.balance < amount) {
-      throw new ApiError(400, "Insufficient balance");
+      throw new ApiError(400, "Insufficient balance.");
     }
 
-    // 3. Create Transaction Record
-    const transaction = new Transaction({
-      fromAccount,
-      toAccount: recipientAccountId,
-      amount,
-      idempotencyKey,
-      status: "pending",
-    });
-    await transaction.save({ session });
+    // ── Populate toAccount user for notifications ──
+    await toAccountDoc.populate("user", "email username name");
 
-    // 4. Update Account Balances
+    // ── Create transaction record ──
+    const [transaction] = await Transaction.create(
+      [{ fromAccount, toAccount: toAccountDoc._id, amount, idempotencyKey, status: "pending" }],
+      { session }
+    );
+
+    // ── Update balances ──
     fromAccountDoc.balance -= amount;
     toAccountDoc.balance += amount;
-
     await fromAccountDoc.save({ session });
     await toAccountDoc.save({ session });
 
-    // 5. Create Ledger Records (immutable trail)
-    const debitEntry = new Ledger({
-      account: fromAccount,
-      amount,
-      transaction: transaction._id,
-      type: "debit",
-    });
+    // ── Write immutable ledger entries ──
+    await Ledger.create(
+      [
+        { account: fromAccountDoc._id, amount, transaction: transaction._id, type: "debit" },
+        { account: toAccountDoc._id, amount, transaction: transaction._id, type: "credit" },
+      ],
+      { session }
+    );
 
-    const creditEntry = new Ledger({
-      account: recipientAccountId,
-      amount,
-      transaction: transaction._id,
-      type: "credit",
-    });
-
-    await debitEntry.save({ session });
-    await creditEntry.save({ session });
-
-    // 6. Complete Transaction
+    // ── Complete transaction ──
     transaction.status = "completed";
     await transaction.save({ session });
 
-    // Commit all changes
     await session.commitTransaction();
 
-    // 7. Post-transaction tasks (Async, don't block response)
+    // ── Post-commit side effects (non-blocking) ──
     const fromUser = fromAccountDoc.user;
     const toUser = toAccountDoc.user;
 
-    // Live Socket.io updates
     if (req.io) {
-      if (toUser) {
-        req.io.to(toUser._id.toString()).emit("new_transaction", {
-          message: `You received ${amount} ${toAccountDoc.currency} from ${fromUser.username || fromUser.name}`,
-          amount,
-          currency: toAccountDoc.currency,
-          type: "credit",
-        });
-      }
-      if (fromUser) {
-        req.io.to(fromUser._id.toString()).emit("transaction_sent", {
-          message: `Successfully sent ${amount} ${fromAccountDoc.currency} to ${toUser.username || toUser.name}`,
-          amount,
-          currency: fromAccountDoc.currency,
-          type: "debit",
-        });
-      }
+      req.io.to(String(toUser._id)).emit("new_transaction", {
+        message: `You received ₹${amount} from ${fromUser.username || fromUser.name}`,
+        amount,
+        currency: toAccountDoc.currency,
+        type: "credit",
+      });
+      req.io.to(String(fromUser._id)).emit("transaction_sent", {
+        message: `Successfully sent ₹${amount} to ${toUser.username || toUser.name}`,
+        amount,
+        currency: fromAccountDoc.currency,
+        type: "debit",
+      });
     }
 
     if (fromUser?.email && toUser?.email) {
-      sendTransactionConfirmationEmail(
-        fromUser.email,
-        toUser.email,
-        amount,
-      ).catch((e) => console.error("Email notification failed:", e.message));
+      sendTransactionConfirmationEmail(fromUser.email, toUser.email, amount).catch((e) =>
+        console.error("Transaction email failed:", e.message)
+      );
     }
 
     return res
       .status(201)
-      .json(
-        new ApiResponse(201, transaction, "Transaction completed successfully"),
-      );
-  } catch (error) {
-    // Rollback all changes
-    await session.abortTransaction();
-    throw error; // Re-throw to be handled by global handler
-  } finally {
-    session.endSession();
-  }
-});
-
-const createInitialFundsTransaction = asyncHandler(async (req, res) => {
-  const { toAccount, amount, idempotencyKey } = req.body;
-
-  if (!toAccount || !amount || !idempotencyKey) {
-    throw new ApiError(400, "Missing required fields");
-  }
-
-  // Find the target user's account
-  const toUserAccount = await Account.findOne({ user: toAccount });
-  if (!toUserAccount) {
-    throw new ApiError(404, "Recipient account not found");
-  }
-
-  // Find the system user's account (assuming system user is req.user)
-  const systemAccount = await Account.findOne({ user: req.user._id });
-  if (!systemAccount) {
-    throw new ApiError(404, "System account not found");
-  }
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    // 1. Create Transaction Document
-    const transaction = new Transaction({
-      fromAccount: systemAccount._id,
-      toAccount: toUserAccount._id,
-      amount,
-      idempotencyKey,
-      status: "pending",
-    });
-
-    await transaction.save({ session });
-
-    // 2. Create Ledger Entries
-    const debitEntry = new Ledger({
-      account: systemAccount._id,
-      amount,
-      transaction: transaction._id,
-      type: "debit",
-    });
-
-    const creditEntry = new Ledger({
-      account: toUserAccount._id,
-      amount,
-      transaction: transaction._id,
-      type: "credit",
-    });
-
-    await debitEntry.save({ session });
-    await creditEntry.save({ session });
-
-    // 3. Update Balance (Optional: if you want to keep running balance in Account model)
-    systemAccount.balance -= amount;
-    toUserAccount.balance += amount;
-    await systemAccount.save({ session });
-    await toUserAccount.save({ session });
-
-    // 4. Update Transaction Status
-    transaction.status = "completed";
-    await transaction.save({ session });
-
-    await session.commitTransaction();
-
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          transaction,
-          "Initial funds transaction completed successfully",
-        ),
-      );
+      .json(new ApiResponse(201, transaction, "Transaction completed successfully."));
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -272,47 +168,95 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
   }
 });
 
-const getTransactionHistory = asyncHandler(async (req, res) => {
-  const { limit = 10, page = 1 } = req.query;
+// ─── Create Initial Funds (System Only) ──────────────────────────────────────
+const createInitialFundsTransaction = asyncHandler(async (req, res) => {
+  const { toAccount, amount, idempotencyKey } = req.body;
 
-  // Find all accounts belonging to the user
-  const userAccounts = await Account.find({ user: req.user._id });
-  const accountIds = userAccounts.map((acc) => acc._id);
+  if (!toAccount || !amount || !idempotencyKey) {
+    throw new ApiError(400, "toAccount, amount, and idempotencyKey are required.");
+  }
 
-  // Find transactions where user is either sender or receiver
-  const transactions = await Transaction.find({
-    $or: [
-      { fromAccount: { $in: accountIds } },
-      { toAccount: { $in: accountIds } },
-    ],
-  })
-    .sort({ createdAt: -1 })
-    .limit(Number(limit))
-    .skip((Number(page) - 1) * Number(limit))
-    .populate("fromAccount", "accountNumber")
-    .populate("toAccount", "accountNumber")
-    .lean();
+  const toUserAccount = await Account.findOne({ user: toAccount });
+  if (!toUserAccount) throw new ApiError(404, "Recipient account not found.");
 
-  // Add type (debit/credit) based on which account belongs to the user
-  const enrichedTransactions = transactions.map((tx) => {
-    const isDebit = accountIds.some(
-      (id) => id.toString() === tx.fromAccount?._id?.toString(),
+  const systemAccount = await Account.findOne({ user: req.user._id });
+  if (!systemAccount) throw new ApiError(404, "System account not found.");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const [transaction] = await Transaction.create(
+      [{ fromAccount: systemAccount._id, toAccount: toUserAccount._id, amount, idempotencyKey, status: "pending" }],
+      { session }
     );
-    return {
-      ...tx,
-      type: isDebit ? "debit" : "credit",
-    };
-  });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, enrichedTransactions, "Transaction history fetched"),
+    await Ledger.create(
+      [
+        { account: systemAccount._id, amount, transaction: transaction._id, type: "debit" },
+        { account: toUserAccount._id, amount, transaction: transaction._id, type: "credit" },
+      ],
+      { session }
     );
+
+    systemAccount.balance -= amount;
+    toUserAccount.balance += amount;
+    await systemAccount.save({ session });
+    await toUserAccount.save({ session });
+
+    transaction.status = "completed";
+    await transaction.save({ session });
+
+    await session.commitTransaction();
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, transaction, "Initial funds transaction completed."));
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 });
 
-module.exports = {
-  createTransaction,
-  createInitialFundsTransaction,
-  getTransactionHistory,
-};
+// ─── Transaction History ─────────────────────────────────────────────────────
+const getTransactionHistory = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 100); // cap at 100
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const skip = (page - 1) * limit;
+
+  const userAccounts = await Account.find({ user: req.user._id }).select("_id");
+  const accountIds = userAccounts.map((a) => a._id);
+
+  const query = {
+    $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
+  };
+
+  const [transactions, total] = await Promise.all([
+    Transaction.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("fromAccount", "currency")
+      .populate("toAccount", "currency")
+      .lean(),
+    Transaction.countDocuments(query),
+  ]);
+
+  // Tag each transaction as debit or credit from the user's perspective
+  const enriched = transactions.map((tx) => {
+    const isDebit = accountIds.some((id) => id.equals(tx.fromAccount?._id));
+    return { ...tx, type: isDebit ? "debit" : "credit" };
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { transactions: enriched, total, page, limit, totalPages: Math.ceil(total / limit) },
+      "Transaction history fetched."
+    )
+  );
+});
+
+module.exports = { createTransaction, createInitialFundsTransaction, getTransactionHistory };
