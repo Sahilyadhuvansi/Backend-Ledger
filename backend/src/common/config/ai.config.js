@@ -9,17 +9,17 @@ module.exports = {
   // ═══════════════════════════════════════════════════════════════
   // LLM Services
   // ═══════════════════════════════════════════════════════════════
-  claude: {
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    model: "claude-sonnet-4-20250514",
+  groq: {
+    apiKey: process.env.GROQ_API_KEY,
+    model: "llama-3.3-70b-versatile",
     maxTokens: 4096,
     temperature: 0.7,
-    enabled: !!process.env.ANTHROPIC_API_KEY,
+    enabled: !!process.env.GROQ_API_KEY,
   },
 
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: "gpt-4-turbo-preview",
+    model: "gpt-4o",
     maxTokens: 4096,
     temperature: 0.7,
     enabled: !!process.env.OPENAI_API_KEY,

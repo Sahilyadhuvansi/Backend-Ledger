@@ -14,6 +14,8 @@ const cookieParser = require("cookie-parser");
 const compression = require("compression");
 const morgan = require("morgan");
 const mongoose = require("mongoose");
+const session = require("express-session");
+const { MongoStore } = require("connect-mongo");
 
 const authRoutes = require("./modules/auth/auth.routes");
 const accountRoutes = require("./modules/accounts/account.routes");
@@ -28,8 +30,13 @@ if (missingEnv.length > 0) {
   process.exit(1);
 }
 
+console.log(`📡 Groq API Key present: ${!!process.env.GROQ_API_KEY}`);
+
 // ─── CORS Origin Logic ───────────────────────────────────────────────────────
 const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5001",
+  "http://localhost:5000",
   ...(process.env.CORS_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean),
 ];
 if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
@@ -129,6 +136,25 @@ app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// ─── Session Management (for AI Chat History) ─────────────────────────────────
+app.use(
+  session({
+    secret: process.env.JWT_SECRET, // Reuse JWT secret for session signature
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: "sessions",
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
+  })
+);
+
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -146,7 +172,15 @@ const authLimiter = rateLimit({
   message: { message: "Too many auth attempts, please try again later." },
 });
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// ─── AI Chat Debug Logger ───────────────────────────────────────────────────
+app.use("/api/ai/chat", (req, res, next) => {
+  console.log(`🔍 AI CHAT REQUEST: ${req.method} ${req.url}`);
+  console.log(`👤 User: ${req.user ? req.user.email : "GUEST"}`);
+  console.log(`📦 Body:`, req.body);
+  next();
+});
+
+// ─── API Routes ──────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => {
   res.status(200).json({
     message: "Backend Ledger API is running",

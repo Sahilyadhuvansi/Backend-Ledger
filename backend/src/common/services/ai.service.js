@@ -1,5 +1,5 @@
-const Anthropic = require("@anthropic-ai/sdk");
 const OpenAI = require("openai");
+const Groq = require("groq-sdk");
 const aiConfig = require("../config/ai.config");
 
 /**
@@ -8,14 +8,14 @@ const aiConfig = require("../config/ai.config");
  */
 class AIService {
   constructor() {
-    // Initialize Claude
-    if (aiConfig.claude.enabled) {
-      this.claude = new Anthropic({
-        apiKey: aiConfig.claude.apiKey,
+    // Initialize Groq (Primary)
+    if (aiConfig.groq.enabled) {
+      this.groq = new Groq({
+        apiKey: aiConfig.groq.apiKey,
       });
     }
 
-    // Initialize OpenAI
+    // Initialize OpenAI (Kept for Embeddings)
     if (aiConfig.openai.enabled) {
       this.openai = new OpenAI({
         apiKey: aiConfig.openai.apiKey,
@@ -33,57 +33,49 @@ class AIService {
     const {
       temperature = 0.7,
       maxTokens = 4096,
-      preferredModel = "claude",
+      preferredModel = "groq",
       systemPrompt = null,
     } = options;
 
     try {
-      // Try Claude first (preferred for most tasks)
-      if (preferredModel === "claude" && this.claude) {
-        return await this._claudeChat(messages, systemPrompt, temperature, maxTokens);
+      // Use Groq for everything
+      if (this.groq) {
+        return await this._groqChat(messages, systemPrompt, temperature, maxTokens);
       }
 
-      // Fallback to OpenAI
+      // Silent fallback to OpenAI if Groq key is missing but OpenAI is available
       if (this.openai) {
         return await this._openaiChat(messages, systemPrompt, temperature, maxTokens);
       }
 
-      throw new Error("No AI service available");
+      throw new Error("Groq API service not configured. Please add GROQ_API_KEY to .env");
     } catch (error) {
       console.error("AI Service Error:", error.message);
-      
-      // Try fallback if primary failed
-      if (preferredModel === "claude" && this.openai) {
-        console.log("Falling back to OpenAI...");
-        return await this._openaiChat(messages, systemPrompt, temperature, maxTokens);
-      }
-      
+      if (error.stack) console.error(error.stack);
       throw error;
     }
   }
 
   /**
-   * Claude API chat implementation
+   * Groq API chat implementation
    */
-  async _claudeChat(messages, systemPrompt, temperature, maxTokens) {
-    const formattedMessages = messages.map((msg) => ({
-      role: msg.role === "system" ? "user" : msg.role,
-      content: msg.content,
-    }));
+  async _groqChat(messages, systemPrompt, temperature, maxTokens) {
+    const formattedMessages = systemPrompt
+      ? [{ role: "system", content: systemPrompt }, ...messages]
+      : messages;
 
-    const response = await this.claude.messages.create({
-      model: aiConfig.claude.model,
-      max_tokens: maxTokens,
-      temperature,
-      system: systemPrompt || undefined,
+    const response = await this.groq.chat.completions.create({
+      model: aiConfig.groq.model,
       messages: formattedMessages,
+      temperature,
+      max_tokens: maxTokens,
     });
 
-    this._trackUsage("claude", response.usage);
+    this._trackUsage("groq", response.usage);
 
     return {
-      content: response.content[0].text,
-      model: "claude",
+      content: response.choices[0].message.content,
+      model: "groq",
       usage: response.usage,
     };
   }
@@ -96,20 +88,25 @@ class AIService {
       ? [{ role: "system", content: systemPrompt }, ...messages]
       : messages;
 
-    const response = await this.openai.chat.completions.create({
-      model: aiConfig.openai.model,
-      messages: formattedMessages,
-      temperature,
-      max_tokens: maxTokens,
-    });
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: aiConfig.openai.model,
+        messages: formattedMessages,
+        temperature,
+        max_tokens: maxTokens,
+      });
 
-    this._trackUsage("openai", response.usage);
+      this._trackUsage("openai", response.usage);
 
-    return {
-      content: response.choices[0].message.content,
-      model: "openai",
-      usage: response.usage,
-    };
+      return {
+        content: response.choices[0].message.content,
+        model: "openai",
+        usage: response.usage,
+      };
+    } catch (error) {
+      console.error("AI Service Error (OpenAI):", error.message);
+      throw error;
+    }
   }
 
   /**
@@ -152,21 +149,19 @@ class AIService {
 
     // Estimate costs (approximate pricing)
     const costs = {
-      claude: {
-        input: 0.003 / 1000, // $3 per million input tokens
-        output: 0.015 / 1000, // $15 per million output tokens
+      groq: {
+        input: 0, 
+        output: 0,
       },
       openai: {
-        input: 0.01 / 1000, // $10 per million tokens
-        output: 0.03 / 1000, // $30 per million tokens
+        input: 0.01 / 1000,
+        output: 0.03 / 1000,
       },
     };
 
-    if (provider === "claude") {
-      const cost =
-        usage.input_tokens * costs.claude.input +
-        usage.output_tokens * costs.claude.output;
-      this.totalCost += cost;
+    if (provider === "groq") {
+      // Groq tracking
+      this.totalCost += 0; // Adjust if using paid tier
     } else if (provider === "openai") {
       const cost =
         usage.prompt_tokens * costs.openai.input +

@@ -196,7 +196,7 @@ const AIAssistant = () => {
           </form>
           <div className="mt-3 text-center">
              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-               Powered by Claude AI
+               Powered by Groq LPUs
              </p>
           </div>
         </div>

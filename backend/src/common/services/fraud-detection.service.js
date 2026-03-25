@@ -1,5 +1,6 @@
 const brain = require("brain.js");
 const Transaction = require("../../modules/transactions/transaction.model");
+const Account = require("../../modules/accounts/account.model");
 const aiService = require("./ai.service");
 
 /**
@@ -220,8 +221,12 @@ Provide a brief, clear explanation (2-3 sentences) for why this transaction is s
    * Get user transaction statistics
    */
   async _getUserStats(userId) {
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     const transactions = await Transaction.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
+      $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
     })
       .sort({ amount: 1 })
       .limit(1000);
@@ -251,8 +256,12 @@ Provide a brief, clear explanation (2-3 sentences) for why this transaction is s
     const cutoff = new Date();
     cutoff.setMinutes(cutoff.getMinutes() - minutes);
 
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     const count = await Transaction.countDocuments({
-      senderId: userId,
+      fromAccount: { $in: accountIds },
       createdAt: { $gte: cutoff },
     });
 
@@ -267,10 +276,14 @@ Provide a brief, clear explanation (2-3 sentences) for why this transaction is s
     const cutoff = new Date();
     cutoff.setMinutes(cutoff.getMinutes() - 5);
 
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     const similar = await Transaction.findOne({
-      senderId: userId,
+      fromAccount: { $in: accountIds },
       amount: transaction.amount,
-      receiverId: transaction.receiverId,
+      toAccount: transaction.toAccount,
       createdAt: { $gte: cutoff },
     });
 
