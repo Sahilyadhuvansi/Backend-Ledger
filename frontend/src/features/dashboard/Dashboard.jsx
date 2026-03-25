@@ -17,6 +17,7 @@ import AccountCard from "./components/AccountCard";
 import BalanceCard from "./components/BalanceCard";
 import TransactionTable from "./components/TransactionTable";
 import InvestmentCard from "./components/InvestmentCard";
+import AIAssistant from "./components/AIAssistant";
 
 const Dashboard = () => {
   const [accounts, setAccounts] = useState([]);
@@ -290,6 +291,9 @@ const Dashboard = () => {
           </button>
         </div>
       )}
+
+      {/* AI ASSISTANT PANEL */}
+      <AIAssistant />
 
       {/* FOOTER SPACE */}
       <div className="h-20" />

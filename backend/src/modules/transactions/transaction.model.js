@@ -33,6 +33,33 @@ const transactionSchema = new mongoose.Schema(
       unique: true,
       index: true,
     },
+    description: {
+      type: String,
+      maxlength: [255, "Description cannot exceed 255 characters"],
+      trim: true,
+    },
+    note: {
+      type: String,
+      maxlength: [1000, "Note cannot exceed 1000 characters"],
+      trim: true,
+    },
+    category: {
+      type: String,
+      default: "other",
+      trim: true,
+    },
+    isFlagged: {
+      type: Boolean,
+      default: false,
+    },
+    isFraud: {
+      type: Boolean,
+      default: false,
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   { timestamps: true },
 );

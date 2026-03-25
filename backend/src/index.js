@@ -18,6 +18,7 @@ const mongoose = require("mongoose");
 const authRoutes = require("./modules/auth/auth.routes");
 const accountRoutes = require("./modules/accounts/account.routes");
 const transactionRoutes = require("./modules/transactions/transaction.routes");
+const aiRoutes = require("./modules/ai/ai.routes");
 
 // ─── Validate Required Env Vars ──────────────────────────────────────────────
 const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI"];
@@ -167,6 +168,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/accounts", apiLimiter, accountRoutes);
 app.use("/api/transactions", apiLimiter, transactionRoutes);
+app.use("/api/ai", apiLimiter, aiRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {

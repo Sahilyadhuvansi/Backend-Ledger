@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* ================= THEME TOKENS ================= */
+
+@theme {
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+
+  --color-bg: #f8fafc;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* ================= GLOBAL ================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+/* ================= COMPONENTS ================= */
+
+.card {
+  @apply bg-white border border-slate-200/60 rounded-2xl shadow-sm transition-all duration-200;
+}
+
+.card:hover {
+  @apply border-slate-300/80 shadow-md shadow-slate-200/40;
+}
+
+/* ================= AUTH ================= */
+
+.auth-card {
+  @apply bg-white border border-slate-200 rounded-3xl shadow-xl shadow-slate-200/50 p-8 md:p-12;
+}
+
+/* ================= INPUT ================= */
+
+.input-field {
+  @apply w-full h-11 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 
+  text-sm font-medium
+  focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 
+  transition-all duration-150;
+}
+
+/* ================= BUTTON ================= */
+
+.btn-primary {
+  @apply w-full h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-sm
+  flex items-center justify-center gap-2 
+  transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply w-full h-11 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-bold text-sm
+  flex items-center justify-center gap-2 
+  transition-all duration-200;
+}
+
+/* ================= PANELS ================= */
+
+.glass-panel {
+  @apply bg-white/80 rounded-2xl shadow-sm border border-slate-200 backdrop-blur-md;
+}
+
+/* ================= SCROLLBAR ================= */
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
