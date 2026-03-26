@@ -17,7 +17,6 @@
     "@google-cloud/vision": "^5.3.5",
     "axios": "^1.13.6",
     "bcrypt": "^5.1.0",
-    "brain.js": "^2.0.0-beta.24",
     "compression": "^1.7.4",
     "connect-mongo": "^6.0.0",
     "cookie-parser": "^1.4.7",
