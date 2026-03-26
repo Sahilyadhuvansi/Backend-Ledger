@@ -37,6 +37,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5001",
   "http://localhost:5000",
+  "https://mini-bank-beta.vercel.app", // Production frontend – always allowed
   ...(process.env.CORS_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean),
 ];
 if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
@@ -137,19 +138,22 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ─── Session Management (for AI Chat History) ─────────────────────────────────
+// NOTE: In production, cookies must be secure=true + sameSite=none for
+// cross-domain requests: Vercel frontend -> Render backend
 app.use(
   session({
-    secret: process.env.JWT_SECRET, // Reuse JWT secret for session signature
+    secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
       collectionName: "sessions",
+      ttl: 24 * 60 * 60, // 24 hours in seconds
     }),
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production", // HTTPS only in production
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
   })
@@ -172,13 +176,6 @@ const authLimiter = rateLimit({
   message: { message: "Too many auth attempts, please try again later." },
 });
 
-// ─── AI Chat Debug Logger ───────────────────────────────────────────────────
-app.use("/api/ai/chat", (req, res, next) => {
-  console.log(`🔍 AI CHAT REQUEST: ${req.method} ${req.url}`);
-  console.log(`👤 User: ${req.user ? req.user.email : "GUEST"}`);
-  console.log(`📦 Body:`, req.body);
-  next();
-});
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.get("/", (_req, res) => {
