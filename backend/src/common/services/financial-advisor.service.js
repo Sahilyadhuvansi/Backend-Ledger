@@ -17,8 +17,12 @@ class FinancialAdvisor {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - period);
 
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     const query = {
-      $or: [{ senderId: userId }, { receiverId: userId }],
+      $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
       createdAt: { $gte: startDate },
     };
 
@@ -31,7 +35,7 @@ class FinancialAdvisor {
       .limit(100);
 
     // Prepare transaction summary
-    const summary = this._summarizeTransactions(transactions, userId);
+    const summary = await this._summarizeTransactions(transactions, userId);
 
     // Generate AI insights
     const prompt = `Analyze these financial transactions and provide actionable insights:
@@ -90,14 +94,18 @@ Format as JSON:
    * Natural language query interface
    */
   async queryFinances(userId, question) {
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     // Fetch recent transaction context
     const transactions = await Transaction.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
+      $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
     })
       .sort({ createdAt: -1 })
       .limit(50);
 
-    const account = await Account.findOne({ userId });
+    const account = await Account.findOne({ user: userId });
 
     // Build context for AI
     const context = `
@@ -146,8 +154,12 @@ ${transactions
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
 
+    // Find user's accounts first
+    const userAccounts = await Account.find({ user: userId });
+    const accountIds = userAccounts.map((acc) => acc._id);
+
     const query = {
-      senderId: userId, // Only outgoing transactions
+      fromAccount: { $in: accountIds }, // Only outgoing transactions
       createdAt: { $gte: startDate },
     };
 
@@ -295,7 +307,7 @@ Return ONLY the category name, nothing else.`;
   /**
    * Helper: Summarize transactions
    */
-  _summarizeTransactions(transactions, userId) {
+  async _summarizeTransactions(transactions, userId) {
     const summary = {
       totalCount: transactions.length,
       totalSpent: 0,
@@ -307,8 +319,13 @@ Return ONLY the category name, nothing else.`;
 
     const daySpending = {};
 
+    // Get user's accounts to identify outgoing vs incoming
+    const userAccountIds = new Set();
+    const userAccounts = await Account.find({ user: userId });
+    userAccounts.forEach(acc => userAccountIds.add(acc._id.toString()));
+
     transactions.forEach((t) => {
-      const isOutgoing = t.senderId.toString() === userId.toString();
+      const isOutgoing = userAccountIds.has(t.fromAccount.toString());
       const amount = t.amount;
 
       if (isOutgoing) {

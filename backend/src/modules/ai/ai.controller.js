@@ -5,6 +5,32 @@ const financialAdvisor = require("../../common/services/financial-advisor.servic
 const aiService = require("../../common/services/ai.service");
 
 /**
+ * Helper: Detect if message is a financial query
+ */
+const _detectFinancialQuery = (message) => {
+  const financialKeywords = [
+    "spend",
+    "spent",
+    "balance",
+    "transaction",
+    "money",
+    "paid",
+    "received",
+    "transfer",
+    "account",
+    "how much",
+    "total",
+    "last month",
+    "this week",
+    "groceries",
+    "bills",
+  ];
+
+  const lowerMessage = message.toLowerCase();
+  return financialKeywords.some((keyword) => lowerMessage.includes(keyword));
+};
+
+/**
  * AI Chatbot Controller
  * Conversational banking assistant
  */
@@ -41,7 +67,7 @@ Keep responses under 200 words unless more detail is specifically requested.`;
   conversationHistory.push({ role: "user", content: message });
 
   // Determine if this is a financial query
-  const isFinancialQuery = await this._detectFinancialQuery(message);
+  const isFinancialQuery = _detectFinancialQuery(message);
 
   let response;
   if (isFinancialQuery) {
@@ -193,28 +219,3 @@ exports.getStats = asyncHandler(async (req, res) => {
     );
 });
 
-/**
- * Helper: Detect if message is a financial query
- */
-exports._detectFinancialQuery = async (message) => {
-  const financialKeywords = [
-    "spend",
-    "spent",
-    "balance",
-    "transaction",
-    "money",
-    "paid",
-    "received",
-    "transfer",
-    "account",
-    "how much",
-    "total",
-    "last month",
-    "this week",
-    "groceries",
-    "bills",
-  ];
-
-  const lowerMessage = message.toLowerCase();
-  return financialKeywords.some((keyword) => lowerMessage.includes(keyword));
-};
