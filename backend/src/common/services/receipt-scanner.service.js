@@ -1,3 +1,7 @@
+// ─── Commit: OCR & Computer Vision Imports ───
+// What this does: Loads Google Vision (Cloud-based OCR) and Tesseract.js (Local-based OCR).
+// Why it exists: To transform a photo of a receipt into actual text that a computer can read.
+// Beginner note: OCR stands for "Optical Character Recognition".
 const vision = require("@google-cloud/vision");
 const Tesseract = require("tesseract.js");
 const aiService = require("./ai.service");
@@ -8,6 +12,9 @@ const aiConfig = require("../config/ai.config");
  * Extract transaction data from receipt images
  */
 class ReceiptScannerService {
+  // ─── Commit: OCR Engine Initialization ───
+  // What this does: Sets up the connection to Google Vision and prepares a local Tesseract worker.
+  // Interview insight: Why have both? To provide a "Fallback" mechanism. If Google Vision is too expensive or unavailable, Tesseract runs locally on your server.
   constructor() {
     // Initialize Google Cloud Vision if available
     if (aiConfig.googleVision.enabled) {
@@ -22,6 +29,9 @@ class ReceiptScannerService {
   /**
    * Initialize Tesseract worker
    */
+  // ─── Commit: Lazy Loading Pattern ───
+  // What this does: Only starts the Tesseract engine when someone actually uploads an image.
+  // Why it exists: Tesseract uses a lot of memory. We don't want to waste resources if nobody is scanning receipts.
   async _initTesseract() {
     if (!this.tesseractWorker) {
       this.tesseractWorker = await Tesseract.createWorker();
@@ -33,11 +43,14 @@ class ReceiptScannerService {
   /**
    * Scan receipt and extract transaction data
    */
+  // ─── Commit: Multi-Stage Workflow (Scan -> Extract -> Parse) ───
+  // How it works: 1. Get raw text from pixels. 2. Send text to the LLM (AI). 3. Return clean JSON.
+  // Pattern used: "Pipeline pattern".
   async scanReceipt(imageBuffer, options = {}) {
     const { useGoogleVision = true } = options;
 
     try {
-      // Extract text from image
+      // Step 1: Extract text from image (Turning pixels into words)
       let extractedText;
       if (useGoogleVision && this.visionClient) {
         extractedText = await this._extractTextGoogleVision(imageBuffer);
@@ -45,7 +58,7 @@ class ReceiptScannerService {
         extractedText = await this._extractTextTesseract(imageBuffer);
       }
 
-      // Parse receipt data using AI
+      // Step 2: Parse receipt data using AI (Turning words into Business Logic)
       const receiptData = await this._parseReceiptWithAI(extractedText);
 
       return {
@@ -75,7 +88,6 @@ class ReceiptScannerService {
       throw new Error("No text detected in image");
     }
 
-    // First annotation contains full text
     return detections[0].description;
   }
 
@@ -99,38 +111,42 @@ class ReceiptScannerService {
   /**
    * Parse receipt data using AI
    */
+  // ─── Commit: AI Receipt Intel Extraction (Prompt Engineering) ───
+  // What this does: Asks the AI to find specific fields (Total, Tax, Merchant) in a messy pile of raw text.
+  // Interview insight: We use Indian context (₹ INR) to ensure the AI understands tax formats like GST.
   async _parseReceiptWithAI(text) {
-    const prompt = `Extract transaction information from this receipt:
+    const prompt = `Extract transaction information from this receipt (Indian context):
 
 ${text}
 
-Extract and return as JSON:
+Extract and return as valid JSON (use ₹ for currency mentions if needed, but amounts as numbers):
 {
   "merchantName": "Store Name",
   "totalAmount": 123.45,
+  "currency": "INR",
   "date": "2026-03-25",
   "items": [
     {"name": "item", "price": 10.00, "quantity": 2}
   ],
   "category": "groceries/dining/shopping/etc",
-  "paymentMethod": "cash/card/unknown",
+  "paymentMethod": "cash/card/upi/unknown",
   "taxAmount": 5.00,
   "confidence": "high/medium/low"
 }
 
-If any field is unclear or missing, use null. Be accurate with amounts.`;
+If any field is unclear or missing, use null. Be extremely accurate with amounts.`;
 
     const response = await aiService.chat(
       [{ role: "user", content: prompt }],
       {
-        temperature: 0.1,
+        temperature: 0.1, // High accuracy, no creative guessing
         maxTokens: 1500,
         systemPrompt:
-          "You are a receipt parsing AI. Extract transaction data accurately. Always return valid JSON.",
+          "You are a professional receipt parsing AI specializing in Indian retail. Extract data accurately. Always return valid JSON.",
       }
     );
 
-    // Parse AI response
+    // ─── Commit: Robust JSON Processing ───
     try {
       const cleaned = response.content.replace(/```json\n?|\n?```/g, "").trim();
       return JSON.parse(cleaned);
@@ -150,6 +166,8 @@ If any field is unclear or missing, use null. Be accurate with amounts.`;
   /**
    * Batch process multiple receipts
    */
+  // ─── Commit: Batch Processing (Iteration) ───
+  // Beginner note: We loop through each buffer and scan them one-by-one to avoid overloading the AI.
   async batchScan(imageBuffers) {
     const results = [];
 
@@ -169,6 +187,9 @@ If any field is unclear or missing, use null. Be accurate with amounts.`;
   /**
    * Validate receipt image quality
    */
+  // ─── Commit: Image Quality Pre-check (Validation) ───
+  // What this does: Checks if the photo is too dark or too bright BEFORE trying to read it.
+  // Why it exists: To provide immediate feedback to the user ("Try turning on your flash").
   async validateImage(imageBuffer) {
     if (!this.visionClient) {
       return { valid: true, warnings: ["Google Vision not configured"] };
@@ -180,7 +201,7 @@ If any field is unclear or missing, use null. Be accurate with amounts.`;
 
       const warnings = [];
 
-      // Check image quality indicators
+      // Check image quality indicators (Brightness analysis)
       if (properties.dominantColors) {
         const avgBrightness = this._calculateAverageBrightness(
           properties.dominantColors.colors
@@ -223,6 +244,9 @@ If any field is unclear or missing, use null. Be accurate with amounts.`;
   /**
    * Cleanup resources
    */
+  // ─── Commit: Memory Management ───
+  // What this does: Shuts down the Tesseract worker when finished.
+  // Why it exists: To prevent "Memory Leaks" on your server.
   async cleanup() {
     if (this.tesseractWorker) {
       await this.tesseractWorker.terminate();
@@ -231,4 +255,5 @@ If any field is unclear or missing, use null. Be accurate with amounts.`;
   }
 }
 
+// ─── Commit: Singleton Export ───
 module.exports = new ReceiptScannerService();

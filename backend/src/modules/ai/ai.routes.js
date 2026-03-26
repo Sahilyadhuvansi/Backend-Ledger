@@ -1,89 +1,57 @@
+// ─── Commit: Express Router Library ───
+// What this does: Initializes the core Router mechanism of the Express framework.
 const express = require("express");
 const router = express.Router();
+
+// ─── Commit: Controller & Logic Imports ───
+// What this does: Loads the AI-specific controllers for Chat, Analysis, and Receipt Scanning.
 const aiController = require("./ai.controller");
 const receiptController = require("./receipt.controller");
 const authMiddleware = require("../../common/middleware/auth.middleware");
 
-// All AI routes require authentication
+// ─── Commit: Root Protection Middleware ───
+// Why it exists: AI requests are expensive! We must ensure that only authorized (logged in) users can use our Groq/OpenAI tokens.
 router.use(authMiddleware.protect);
 
-// ═══════════════════════════════════════════════════════════════
-// Chatbot Routes
-// ═══════════════════════════════════════════════════════════════
+// ─── Commit: AI Chat & Interaction Routes ───
+// What this does: Defines the endpoints for the "Neural Wealth Advisor" chatbot.
+// Pattern used: RESTful endpoints (/chat, /conversation).
 
-/**
- * @route   POST /api/ai/chat
- * @desc    Chat with AI banking assistant
- * @access  Private
- */
+// Standard chat interface
 router.post("/chat", aiController.chat);
 
-/**
- * @route   DELETE /api/ai/conversation
- * @desc    Clear chat history
- * @access  Private
- */
+// Resets the conversation history window in the database
 router.delete("/conversation", aiController.clearConversation);
 
-// ═══════════════════════════════════════════════════════════════
-// Financial Analysis Routes
-// ═══════════════════════════════════════════════════════════════
+// ─── Commit: Financial Wisdom Routes ───
+// What this does: Endpoints that call our 'financial-advisor.service.js' logic.
+// Why 'POST'? Because we often need to send parameters like "Period" or "Categories" in the request body.
 
-/**
- * @route   POST /api/ai/analyze-spending
- * @desc    Get AI spending analysis
- * @access  Private
- */
+// Deep-dive into historical spending
 router.post("/analyze-spending", aiController.analyzeSpending);
 
-/**
- * @route   POST /api/ai/predict-spending
- * @desc    Predict future spending
- * @access  Private
- */
+// Future prediction engine
 router.post("/predict-spending", aiController.predictSpending);
 
-/**
- * @route   POST /api/ai/recommend-budget
- * @desc    Get AI budget recommendations
- * @access  Private
- */
+// Personalized monthly budget planning
 router.post("/recommend-budget", aiController.recommendBudget);
 
-/**
- * @route   GET /api/ai/insights
- * @desc    Get personalized financial insights
- * @access  Private
- */
+// Quick dashboard "Nudges" and tips
 router.get("/insights", aiController.getInsights);
 
-// ═══════════════════════════════════════════════════════════════
-// Receipt Scanning Routes
-// ═══════════════════════════════════════════════════════════════
+// ─── Commit: Paperwork-to-Pixels Routes ───
+// What this does: Routes for uploading receipt images for OCR scanning.
+// Beginner note: The client sends a multipart file upload here.
 
-/**
- * @route   POST /api/ai/scan-receipt
- * @desc    Scan receipt and extract transaction data
- * @access  Private
- */
+// Single receipt extraction
 router.post("/scan-receipt", receiptController.scanReceipt);
 
-/**
- * @route   POST /api/ai/scan-receipts/batch
- * @desc    Scan multiple receipts
- * @access  Private
- */
+// Multi-receipt processing (Batch mode)
 router.post("/scan-receipts/batch", receiptController.batchScanReceipts);
 
-// ═══════════════════════════════════════════════════════════════
-// Statistics & Monitoring
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * @route   GET /api/ai/stats
- * @desc    Get AI usage statistics
- * @access  Private
- */
+// ─── Commit: Monitoring & Observability ───
+// What this does: Shows the currently logged-in user their AI usage stats and limits.
 router.get("/stats", aiController.getStats);
 
+// ─── Commit: Router Export ───
 module.exports = router;

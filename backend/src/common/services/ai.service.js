@@ -1,3 +1,9 @@
+// ─── Commit: AI SDK and Configuration Imports ───
+// What this does: Imports the official SDKs for OpenAI and Groq, plus our local AI settings.
+// Why it exists: To enable communication with Large Language Model (LLM) APIs.
+// Libraries used: openai (OpenAI SDK), groq-sdk (Groq's LPU inference SDK).
+// Beginner note: 'require' statements load pre-built tools into our project.
+// Interview insight: Why use multiple providers? To ensure "Redundancy" or "Hybrid Usage" (e.g., Groq for speed, OpenAI for specific features like Embeddings).
 const OpenAI = require("openai");
 const Groq = require("groq-sdk");
 const aiConfig = require("../config/ai.config");
@@ -7,15 +13,19 @@ const aiConfig = require("../config/ai.config");
  * Handles all LLM interactions with fallback support
  */
 class AIService {
+  // ─── Commit: Constructor and SDK Initialization ───
+  // What this does: Sets up the connection to Groq and OpenAI when the class is first created.
+  // How it works: Checks if 'enabled' is true in config, then creates new instances using API keys.
+  // Interview insight: This follows the "Singleton" pattern when exported below, ensuring only one instance exists.
   constructor() {
-    // Initialize Groq (Primary)
+    // Initialize Groq (Primary Provider for fast LPU inference)
     if (aiConfig.groq.enabled) {
       this.groq = new Groq({
         apiKey: aiConfig.groq.apiKey,
       });
     }
 
-    // Initialize OpenAI (Kept for Embeddings)
+    // Initialize OpenAI (Used mainly for high-quality Vector Embeddings)
     if (aiConfig.openai.enabled) {
       this.openai = new OpenAI({
         apiKey: aiConfig.openai.apiKey,
@@ -29,6 +39,10 @@ class AIService {
   /**
    * Generate chat completion with automatic fallback
    */
+  // ─── Commit: Unified Chat Method with Primary/Fallback Logic ───
+  // What this does: Takes user messages and returns an AI response, trying Groq first.
+  // Why it exists: To ensure the AI works even if one provider goes down or is missing a key.
+  // How it works: Uses a 'try-catch' block. If Groq exists, it calls its handler; otherwise drops to OpenAI.
   async chat(messages, options = {}) {
     const {
       temperature = 0.7,
@@ -38,12 +52,12 @@ class AIService {
     } = options;
 
     try {
-      // Use Groq for everything
+      // Step 1: Attempt to use Groq for the fastest response (LPU technology)
       if (this.groq) {
         return await this._groqChat(messages, systemPrompt, temperature, maxTokens);
       }
 
-      // Silent fallback to OpenAI if Groq key is missing but OpenAI is available
+      // Step 2: Silent fallback to OpenAI if Groq is unavailable
       if (this.openai) {
         return await this._openaiChat(messages, systemPrompt, temperature, maxTokens);
       }
@@ -59,6 +73,10 @@ class AIService {
   /**
    * Groq API chat implementation
    */
+  // ─── Commit: Groq-Specific Request Implementation ───
+  // What this does: Handles the raw network request to Groq's API.
+  // How it works: Formats the message list, injects a system prompt if needed, and awaits the completion.
+  // Interview insight: We track usage (usage.prompt_tokens) immediately after the response to monitor performance/cost.
   async _groqChat(messages, systemPrompt, temperature, maxTokens) {
     const formattedMessages = systemPrompt
       ? [{ role: "system", content: systemPrompt }, ...messages]
@@ -83,6 +101,8 @@ class AIService {
   /**
    * OpenAI API chat implementation
    */
+  // ─── Commit: OpenAI-Specific Request Implementation ───
+  // Why it exists: Acts as a reliable backup or alternative to Groq.
   async _openaiChat(messages, systemPrompt, temperature, maxTokens) {
     const formattedMessages = systemPrompt
       ? [{ role: "system", content: systemPrompt }, ...messages]
@@ -112,6 +132,10 @@ class AIService {
   /**
    * Generate embeddings for vector search
    */
+  // ─── Commit: Machine Learning Embeddings Generation ───
+  // What this does: Converts text strings into long arrays of numbers (vectors).
+  // Why it exists: To allow the computer to calculate "Semantic Similarity" between pieces of text.
+  // Beginner note: Embeddings allow the AI to "search by meaning" instead of just "searching by keywords".
   async generateEmbedding(text) {
     if (!this.openai) {
       throw new Error("OpenAI required for embeddings");
@@ -126,7 +150,7 @@ class AIService {
   }
 
   /**
-   * Batch embedding generation
+   * Batch embedding generation (for efficiency)
    */
   async generateEmbeddings(texts) {
     if (!this.openai) {
@@ -144,15 +168,15 @@ class AIService {
   /**
    * Track API usage and costs
    */
+  // ─── Commit: Usage and Cost Monitoring ───
+  // What this does: Calculates how much money/tokens are being spent on each request.
+  // Real-world analogy: Like a taxi meter that calculates the fare based on distance traveled.
+  // Interview insight: Monitoring costs in real-time is vital for production AI apps to prevent "invoice shock".
   _trackUsage(provider, usage) {
     this.requestCount++;
 
-    // Estimate costs (approximate pricing)
     const costs = {
-      groq: {
-        input: 0, 
-        output: 0,
-      },
+      groq: { input: 0, output: 0 }, // Adjust based on your current tier
       openai: {
         input: 0.01 / 1000,
         output: 0.03 / 1000,
@@ -160,8 +184,7 @@ class AIService {
     };
 
     if (provider === "groq") {
-      // Groq tracking
-      this.totalCost += 0; // Adjust if using paid tier
+      this.totalCost += 0; 
     } else if (provider === "openai") {
       const cost =
         usage.prompt_tokens * costs.openai.input +
@@ -169,7 +192,7 @@ class AIService {
       this.totalCost += cost;
     }
 
-    // Check budget limits
+    // Safety Thresholds
     if (this.totalCost > aiConfig.costLimits.dailyBudget * aiConfig.costLimits.warningThreshold) {
       console.warn(
         `⚠️  AI costs approaching limit: $${this.totalCost.toFixed(4)} / $${aiConfig.costLimits.dailyBudget}`
@@ -197,7 +220,8 @@ class AIService {
   }
 }
 
-// Singleton instance
+// ─── Commit: Singleton Export ───
+// Why it exists: To ensure only ONE instance of the AI service is used across the entire application.
 const aiService = new AIService();
 
 module.exports = aiService;

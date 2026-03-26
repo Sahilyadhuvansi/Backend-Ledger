@@ -1,3 +1,7 @@
+// ─── Commit: Core Module and Model Imports ───
+// What this does: Loads the AI central service and the database models for Transactions and Accounts.
+// Why it exists: This service combines raw data (from MongoDB) with the "intelligence" of the AI (via Groq).
+// Beginner note: '..' moves up one folder level, allowing us to access different parts of the project.
 const aiService = require("../services/ai.service");
 const Transaction = require("../../modules/transactions/transaction.model");
 const Account = require("../../modules/accounts/account.model");
@@ -10,17 +14,22 @@ class FinancialAdvisor {
   /**
    * Analyze spending patterns and provide insights
    */
+  // ─── Commit: Spending Analysis Logic ───
+  // What this does: Gathers transactions from the database for a specific period (e.g., 30 days) and asks the AI to find patterns.
+  // How it works: 1. Calculates start date. 2. Queries MongoDB for matching transactions. 3. Formats summary. 4. Sends formatted prompt to AI.
+  // Interview insight: Why query by account IDs? Because a single user might have multiple accounts (Savings, Checking), and we want a "Holistic View".
   async analyzeSpending(userId, options = {}) {
     const { period = 30, category = null } = options;
 
-    // Fetch user's transactions
+    // Fetch user's transactions based on date range
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - period);
 
-    // Find user's accounts first
+    // Identify all accounts owned by this user
     const userAccounts = await Account.find({ user: userId });
     const accountIds = userAccounts.map((acc) => acc._id);
 
+    // Mongoose query using $or to find transactions where user is either sender or receiver
     const query = {
       $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
       createdAt: { $gte: startDate },
@@ -34,10 +43,13 @@ class FinancialAdvisor {
       .sort({ createdAt: -1 })
       .limit(100);
 
-    // Prepare transaction summary
+    // Prepare transaction summary (math-heavy part)
     const summary = await this._summarizeTransactions(transactions, userId);
 
-    // Generate AI insights
+    // ─── Commit: AI Prompt Engineering for Analysis ───
+    // What this does: Carefully crafts a text prompt that tells the AI exactly how to analyze the data.
+    // Why it exists: Large Language Models (LLMs) need context (Currency, Period, Totals) to give meaningful advice.
+    // Beginner note: Template literals (using `) allow us to inject variables directly into strings.
     const prompt = `Analyze these financial transactions and provide actionable insights:
 
 Currency: Indian Rupees (₹ INR)
@@ -75,14 +87,14 @@ Format as JSON:
     const response = await aiService.chat(
       [{ role: "user", content: prompt }],
       {
-        temperature: 0.3,
+        temperature: 0.3, // Lower temperature means more "serious" and predictable output
         maxTokens: 2000,
         systemPrompt:
           "You are a financial advisor AI for an Indian banking app. All amounts are in Indian Rupees (₹ INR). Provide clear, actionable advice based on transaction data. Always use ₹ symbol for amounts. Always format responses as valid JSON.",
       }
     );
 
-    // Parse AI response
+    // Parse the AI's text response back into a standard Javascript object
     const analysis = this._parseJSON(response.content);
 
     return {
@@ -96,12 +108,14 @@ Format as JSON:
   /**
    * Natural language query interface
    */
+  // ─── Commit: NLP Financial Query Interface ───
+  // What this does: Allows users to ask questions like "How much did I spend on Chai last week?"
+  // Why it exists: Provides a "Chat-with-your-data" experience.
+  // How it works: Feeds the last 50 transactions + balance into the AI window as "Context".
   async queryFinances(userId, question) {
-    // Find user's accounts first
     const userAccounts = await Account.find({ user: userId });
     const accountIds = userAccounts.map((acc) => acc._id);
 
-    // Fetch recent transaction context
     const transactions = await Transaction.find({
       $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
     })
@@ -110,7 +124,6 @@ Format as JSON:
 
     const account = await Account.findOne({ user: userId });
 
-    // Build context for AI
     const context = `
 User Account (Currency: Indian Rupees ₹ INR):
 - Current Balance: ₹${account?.balance || 0}
@@ -150,19 +163,21 @@ ${transactions
   /**
    * Predict future spending
    */
+  // ─── Commit: Financial Forecasting Logic ───
+  // What this does: Uses historical data to guess what spending will look like in the next 30 days.
+  // Why it exists: Helping users prepare for future expenses and avoid debt.
+  // Interview insight: This is a form of "Regression Analysis" or "Time Series Prediction" using an LLM instead of a traditional statistical model.
   async predictSpending(userId, options = {}) {
     const { forecastDays = 30, category = null } = options;
 
-    // Get historical data (last 90 days)
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
 
-    // Find user's accounts first
     const userAccounts = await Account.find({ user: userId });
     const accountIds = userAccounts.map((acc) => acc._id);
 
     const query = {
-      fromAccount: { $in: accountIds }, // Only outgoing transactions
+      fromAccount: { $in: accountIds }, 
       createdAt: { $gte: startDate },
     };
 
@@ -172,10 +187,8 @@ ${transactions
 
     const transactions = await Transaction.find(query).sort({ createdAt: 1 });
 
-    // Group by day
     const dailySpending = this._groupByDay(transactions);
 
-    // Prepare data for AI
     const dataString = Object.entries(dailySpending)
       .map(([date, amount]) => `${date}: ₹${amount.toFixed(2)}`)
       .join("\n");
@@ -223,8 +236,10 @@ Format as JSON:
   /**
    * Generate budget recommendations
    */
+  // ─── Commit: Category-wise Budget Recommendation ───
+  // What this does: Suggests specific limits for Groceries, Dining, etc., based on past 3 months.
+  // Real-world analogy: Like having a personal accountant create a personalized monthly plan for you.
   async recommendBudget(userId) {
-    // Analyze last 3 months of spending
     const analysis = await this.analyzeSpending(userId, { period: 90 });
 
     const prompt = `Based on this spending analysis, create a realistic monthly budget (all amounts in Indian Rupees ₹ INR):
@@ -276,6 +291,9 @@ Format as JSON:
   /**
    * Categorize transaction using AI
    */
+  // ─── Commit: AI Transaction Categorizer ───
+  // What this does: Takes a raw transaction description (e.g., "ZOMATO 234123") and labels it as "dining".
+  // Why it exists: Manual entry is boring; AI makes the dashboard clean and organized automatically.
   async categorizeTransaction(description, amount, merchant = null) {
     const prompt = `Categorize this financial transaction (Indian banking context):
 
@@ -303,13 +321,17 @@ Return ONLY the category name, nothing else.`;
 
     return {
       category,
-      confidence: "high", // Could enhance with confidence scoring
+      confidence: "high", 
     };
   }
 
   /**
    * Helper: Summarize transactions
    */
+  // ─── Commit: Data Pre-processing / Aggregation ───
+  // What this does: Iterates through transaction arrays to calculate totals, category counts, and daily peaks.
+  // How it works: Uses a Set to track user IDs and performs basic arithmetic.
+  // Interview insight: This logic is "O(n)" complexity because we only loop through the list once.
   async _summarizeTransactions(transactions, userId) {
     const summary = {
       totalCount: transactions.length,
@@ -322,7 +344,6 @@ Return ONLY the category name, nothing else.`;
 
     const daySpending = {};
 
-    // Get user's accounts to identify outgoing vs incoming
     const userAccountIds = new Set();
     const userAccounts = await Account.find({ user: userId });
     userAccounts.forEach(acc => userAccountIds.add(acc._id.toString()));
@@ -337,7 +358,6 @@ Return ONLY the category name, nothing else.`;
         summary.totalReceived += amount;
       }
 
-      // Category breakdown
       const cat = t.category || "uncategorized";
       if (!summary.byCategory[cat]) {
         summary.byCategory[cat] = { total: 0, count: 0 };
@@ -347,7 +367,6 @@ Return ONLY the category name, nothing else.`;
         summary.byCategory[cat].count++;
       }
 
-      // Day tracking
       const day = t.createdAt.toLocaleDateString();
       daySpending[day] = (daySpending[day] || 0) + (isOutgoing ? amount : 0);
     });
@@ -357,7 +376,6 @@ Return ONLY the category name, nothing else.`;
         ? (summary.totalSpent + summary.totalReceived) / summary.totalCount
         : 0;
 
-    // Top spending days
     summary.topDays = Object.entries(daySpending)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
@@ -381,9 +399,11 @@ Return ONLY the category name, nothing else.`;
   /**
    * Helper: Parse JSON safely
    */
+  // ─── Commit: Robust JSON Processing ───
+  // What this does: Cleans up AI output (removing markdown blocks) so it can be parsed without crashing the server.
+  // Why it exists: AI provides "Markdown" often (e.g., ```json ... ```), which JSON.parse cannot read directly.
   _parseJSON(text) {
     try {
-      // Remove markdown code blocks if present
       const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
       return JSON.parse(cleaned);
     } catch (e) {
@@ -393,4 +413,6 @@ Return ONLY the category name, nothing else.`;
   }
 }
 
+// ─── Commit: Service Modularization ───
+// Why it exists: Exporting a "New Instance" allows other files to use this service without re-initializing it.
 module.exports = new FinancialAdvisor();

@@ -1,9 +1,19 @@
+// ─── Commit: Initialize Environment and DNS Settings ───
+// What this does: Loads environment variables and ensures network stability for database connections.
+// Why it exists: Necessary for reading secret keys (like API tokens) and avoiding resolution errors with MongoDB Atlas.
+// How it works: use 'dotenv' to load .env file into memory and set Node's internal DNS servers to Google's public DNS.
+// Beginner note: Always call dotenv.config() at the very first line of your entry file!
+// Interview insight: Why set DNS servers? Standard DNS can sometimes fail to resolve cloud DB URLs; Google DNS (8.8.8.8) is a standard production safety measure.
 require("dotenv").config();
 const dns = require('node:dns');
 
 // Configure Google DNS to prevent resolution issues with MongoDB Atlas or other external services
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
+// ─── Commit: Core Library and Route Imports ───
+// What this does: Brings in all necessary framework components (Express, Mongoose, Socket.io) and application modules.
+// Why it exists: These are the "building blocks" of your backend.
+// Libraries used: express (Web framework), mongoose (DB driver), socket.io (Real-time), helmet (Security), cors (Access control).
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -17,12 +27,15 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const { MongoStore } = require("connect-mongo");
 
+// Feature-specific route modules (MVC Pattern)
 const authRoutes = require("./modules/auth/auth.routes");
 const accountRoutes = require("./modules/accounts/account.routes");
 const transactionRoutes = require("./modules/transactions/transaction.routes");
 const aiRoutes = require("./modules/ai/ai.routes");
 
-// ─── Validate Required Env Vars ──────────────────────────────────────────────
+// ─── Commit: Environment Validation ───
+// What this does: Checks if critical keys exist before starting the engine.
+// Why it exists: Preventing "undefined" errors later in the execution life-cycle.
 const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI"];
 const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missingEnv.length > 0) {
@@ -32,7 +45,11 @@ if (missingEnv.length > 0) {
 
 console.log(`📡 Groq API Key present: ${!!process.env.GROQ_API_KEY}`);
 
-// ─── CORS Origin Logic ───────────────────────────────────────────────────────
+// ─── Commit: Cross-Origin Resource Sharing (CORS) Configuration ───
+// What this does: Whitelists specific domains (like your Vercel frontend) to access your backend API.
+// Why it exists: Browser security blocks requests between different domains (ports) by default.
+// How it works: Defines which origins and methods are allowed through HTTP headers.
+// Interview insight: Credentials set to 'true' allows the browser to send cookies/auth headers across domains.
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5001",
@@ -62,7 +79,10 @@ const corsOptions = {
   credentials: true,
 };
 
-// ─── Database ─────────────────────────────────────────────────────────────────
+// ─── Commit: Database Connection Management ───
+// What this does: Connects your app to the MongoDB cluster.
+// Why it exists: Without this, there is no storage for users or transactions.
+// How it works: Uses Mongoose driver with a singleton connection pattern (checks readyState).
 let dbError = null;
 let dbConnectPromise = null;
 
@@ -88,13 +108,17 @@ const connectDB = async () => {
   return dbConnectPromise;
 };
 
-// ─── App Setup ────────────────────────────────────────────────────────────────
+// ─── Commit: Express App and Server Initialization ───
+// What this does: Creates the main application instance and HTTP server.
+// Beginner note: We use 'http.createServer' so we can wrap it with Socket.io later.
 const app = express();
 const server = http.createServer(app);
 
-app.set("trust proxy", 1);
+app.set("trust proxy", 1); // Crucial for apps behind proxies like Vercel/Render
 
-// ─── Socket.io ────────────────────────────────────────────────────────────────
+// ─── Commit: Real-Time Communication (Socket.io) ───
+// What this does: Enables two-way, low-latency communication (e.g., instant transaction alerts).
+// How it works: Maps users to specific "rooms" using their IDs to send targeted notifications.
 const io = new Server(server, { cors: corsOptions });
 
 io.on("connection", (socket) => {
@@ -109,12 +133,15 @@ io.on("connection", (socket) => {
   });
 });
 
+// Middleware to expose the Socket.io instance to all subsequent API routes via req.io
 app.use((req, _res, next) => {
   req.io = io;
   next();
 });
 
-// ─── Global Middleware ────────────────────────────────────────────────────────
+// ─── Commit: Security and Traffic Middleware Pipeline ───
+// What this does: Implements compression, security headers (Helmet), and logging (Morgan).
+// Why it exists: To make the API fast (compression), secure (helmet), and observable (morgan).
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(
@@ -137,9 +164,11 @@ app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// ─── Session Management (for AI Chat History) ─────────────────────────────────
-// NOTE: In production, cookies must be secure=true + sameSite=none for
-// cross-domain requests: Vercel frontend -> Render backend
+// ─── Commit: State Persistence (Session Management) ───
+// What this does: Keeps users logged in and stores lightweight state (like AI chat history) in MongoDB.
+// Why it exists: Standard HTTP is "stateless" (forgets users after every request); sessions provide "memory".
+// Libraries used: express-session, connect-mongo.
+// Interview insight: Why use 'connect-mongo'? If you store sessions in server RAM, they are lost on restart. External storage is "stateless" server architecture.
 app.use(
   session({
     secret: process.env.JWT_SECRET,
@@ -159,7 +188,8 @@ app.use(
   })
 );
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// ─── Commit: Defensive Programming (Rate Limiting) ───
+// What this does: Prevents abuse and DDoS attacks by limiting how many requests a user can make.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -177,7 +207,8 @@ const authLimiter = rateLimit({
 });
 
 
-// ─── API Routes ──────────────────────────────────────────────────────────────
+// ─── Commit: Route Definitions ───
+// What this does: Maps URI paths to their respective handler functions.
 app.get("/", (_req, res) => {
   res.status(200).json({
     message: "Backend Ledger API is running",
@@ -201,13 +232,15 @@ app.use("/api/accounts", apiLimiter, accountRoutes);
 app.use("/api/transactions", apiLimiter, transactionRoutes);
 app.use("/api/ai", apiLimiter, aiRoutes);
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
+// Catch-all 404 handler for any undefined routes
 app.use((_req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-// ─── Global Error Handler ─────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
+// ─── Commit: Centralized Error Handling Middleware ───
+// What this does: Catches all errors thrown in the app and returns a uniform JSON response.
+// Real-world analogy: This is the "Emergency Emergency Room" of your app.
+// Interview insight: Why differentiate prod/dev? To hide stack traces from users in production while helping devs debug in local.
 app.use((err, _req, res, _next) => {
   const statusCode = err.statusCode || 500;
   const isProd = process.env.NODE_ENV === "production";
@@ -219,7 +252,8 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Commit: Server Launch ───
+// What this does: Binds the app to a port and starts receiving traffic.
 const startServer = async () => {
   await connectDB();
   const PORT = process.env.PORT || 3000;
