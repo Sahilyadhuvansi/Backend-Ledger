@@ -40,15 +40,16 @@ class FinancialAdvisor {
     // Generate AI insights
     const prompt = `Analyze these financial transactions and provide actionable insights:
 
+Currency: Indian Rupees (₹ INR)
 Period: Last ${period} days
 Total Transactions: ${summary.totalCount}
-Total Spent: $${summary.totalSpent.toFixed(2)}
-Total Received: $${summary.totalReceived.toFixed(2)}
-Average Transaction: $${summary.avgAmount.toFixed(2)}
+Total Spent: ₹${summary.totalSpent.toFixed(2)}
+Total Received: ₹${summary.totalReceived.toFixed(2)}
+Average Transaction: ₹${summary.avgAmount.toFixed(2)}
 
 Category Breakdown:
 ${Object.entries(summary.byCategory)
-  .map(([cat, data]) => `- ${cat}: $${data.total.toFixed(2)} (${data.count} transactions)`)
+  .map(([cat, data]) => `- ${cat}: ₹${data.total.toFixed(2)} (${data.count} transactions)`)
   .join("\n")}
 
 Top Spending Days: ${summary.topDays.join(", ")}
@@ -59,6 +60,8 @@ Provide:
 3. Savings opportunities
 4. Budget recommendations
 5. Financial health score (1-10)
+
+IMPORTANT: All amounts are in Indian Rupees (₹ INR). Use ₹ symbol in your response.
 
 Format as JSON:
 {
@@ -75,7 +78,7 @@ Format as JSON:
         temperature: 0.3,
         maxTokens: 2000,
         systemPrompt:
-          "You are a financial advisor AI. Provide clear, actionable advice based on transaction data. Always format responses as valid JSON.",
+          "You are a financial advisor AI for an Indian banking app. All amounts are in Indian Rupees (₹ INR). Provide clear, actionable advice based on transaction data. Always use ₹ symbol for amounts. Always format responses as valid JSON.",
       }
     );
 
@@ -109,22 +112,22 @@ Format as JSON:
 
     // Build context for AI
     const context = `
-User Account:
-- Current Balance: $${account?.balance || 0}
+User Account (Currency: Indian Rupees ₹ INR):
+- Current Balance: ₹${account?.balance || 0}
 - Account Type: ${account?.accountType || "standard"}
 
 Recent Transactions (last 50):
 ${transactions
   .map(
     (t) =>
-      `- ${t.createdAt.toLocaleDateString()}: ${t.type} of $${t.amount} ${
+      `- ${t.createdAt.toLocaleDateString()}: ${t.type} of ₹${t.amount} ${
         t.description ? `(${t.description})` : ""
       } [Category: ${t.category || "uncategorized"}]`
   )
   .join("\n")}
 `;
 
-    const systemPrompt = `You are a helpful financial assistant. Answer questions about the user's finances based on the provided transaction history and account data. Be concise, accurate, and helpful. If you cannot determine the answer from the data, say so clearly.`;
+    const systemPrompt = `You are a helpful financial assistant for an Indian banking app. All amounts are in Indian Rupees (₹ INR). Answer questions about the user's finances based on the provided transaction history and account data. Always use ₹ symbol when mentioning amounts. Be concise, accurate, and helpful. If you cannot determine the answer from the data, say so clearly.`;
 
     const userPrompt = `${context}\n\nUser Question: ${question}\n\nProvide a clear, direct answer based on the transaction data.`;
 
@@ -174,7 +177,7 @@ ${transactions
 
     // Prepare data for AI
     const dataString = Object.entries(dailySpending)
-      .map(([date, amount]) => `${date}: $${amount.toFixed(2)}`)
+      .map(([date, amount]) => `${date}: ₹${amount.toFixed(2)}`)
       .join("\n");
 
     const prompt = `Based on this spending history, predict spending for the next ${forecastDays} days:
@@ -203,7 +206,7 @@ Format as JSON:
         temperature: 0.2,
         maxTokens: 1500,
         systemPrompt:
-          "You are a financial forecasting AI. Analyze spending patterns and make data-driven predictions. Always return valid JSON.",
+          "You are a financial forecasting AI for an Indian banking app. All amounts are in Indian Rupees (₹ INR). Analyze spending patterns and make data-driven predictions. Always use ₹ for amounts. Always return valid JSON.",
       }
     );
 
@@ -224,33 +227,33 @@ Format as JSON:
     // Analyze last 3 months of spending
     const analysis = await this.analyzeSpending(userId, { period: 90 });
 
-    const prompt = `Based on this spending analysis, create a realistic monthly budget:
+    const prompt = `Based on this spending analysis, create a realistic monthly budget (all amounts in Indian Rupees ₹ INR):
 
 Current Spending:
 ${Object.entries(analysis.summary.byCategory)
-  .map(([cat, data]) => `- ${cat}: $${data.total.toFixed(2)}/month`)
+  .map(([cat, data]) => `- ${cat}: ₹${data.total.toFixed(2)}/month`)
   .join("\n")}
 
-Total Monthly Spending: $${analysis.summary.totalSpent.toFixed(2)}
-Income (estimated from deposits): $${analysis.summary.totalReceived.toFixed(2)}
+Total Monthly Spending: ₹${analysis.summary.totalSpent.toFixed(2)}
+Income (estimated from deposits): ₹${analysis.summary.totalReceived.toFixed(2)}
 
-Create a balanced budget with:
-1. Recommended allocation per category
+Create a balanced budget for an Indian user with:
+1. Recommended allocation per category (in ₹)
 2. Savings goal (percentage of income)
-3. Emergency fund recommendation
-4. Discretionary spending limit
+3. Emergency fund recommendation (in ₹)
+4. Discretionary spending limit (in ₹)
 
 Format as JSON:
 {
   "monthlyBudget": {
-    "groceries": 500,
-    "dining": 300,
+    "groceries": 5000,
+    "dining": 3000,
     ...
   },
-  "savingsGoal": 500,
-  "emergencyFund": 3000,
-  "discretionary": 400,
-  "totalBudget": 2500
+  "savingsGoal": 5000,
+  "emergencyFund": 30000,
+  "discretionary": 4000,
+  "totalBudget": 25000
 }`;
 
     const response = await aiService.chat(
@@ -274,10 +277,10 @@ Format as JSON:
    * Categorize transaction using AI
    */
   async categorizeTransaction(description, amount, merchant = null) {
-    const prompt = `Categorize this financial transaction:
+    const prompt = `Categorize this financial transaction (Indian banking context):
 
 Description: ${description}
-Amount: $${amount}
+Amount: ₹${amount}
 ${merchant ? `Merchant: ${merchant}` : ""}
 
 Choose the MOST appropriate category from:
