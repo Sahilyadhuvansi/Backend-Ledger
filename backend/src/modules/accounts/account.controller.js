@@ -45,10 +45,17 @@ const getAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Account not found.");
   }
 
+<<<<<<< HEAD
   // Interview insight: We use 'Promise.all' here. 
   // Why? If we used 'await A; await B;' it would take 200ms. With 'Promise.all', both run at once, taking only 100ms! (Parallelism).
   const [calculatedBalance, recentTransactions] = await Promise.all([
     account.calculateCurrentBalance(), // Complex math in DB
+=======
+  const verify = req.query.verify === "true";
+
+  const [calculatedBalance, recentTransactions] = await Promise.all([
+    verify ? account.calculateCurrentBalance() : Promise.resolve(account.balance), // complex math ONLY if requested
+>>>>>>> main
     Ledger.find({ account: id })
       .sort({ createdAt: -1 }) // Newest first
       .limit(10)
@@ -59,7 +66,7 @@ const getAccountDetails = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(
       200,
-      { ...account.toObject(), calculatedBalance, recentTransactions },
+      { ...account.toObject(), balance: account.balance, verifiedBalance: calculatedBalance, recentTransactions },
       "Account details fetched successfully."
     )
   );

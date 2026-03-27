@@ -215,17 +215,28 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
 // Why it exists: Performance! Loading 1,000,000 transactions at once would crash the app.
 // Beginner note: 'limit' and 'skip' are the tools we use for "Infinite Scroll" or "Next Page" behavior.
 const getTransactionHistory = asyncHandler(async (req, res) => {
+<<<<<<< HEAD
   const limit = Math.min(Number(req.query.limit) || 10, 100); 
+=======
+  const limit = Math.min(Number(req.query.limit) || 10, 100);
+>>>>>>> main
   const page = Math.max(Number(req.query.page) || 1, 1);
   const skip = (page - 1) * limit;
 
-  const userAccounts = await Account.find({ user: req.user._id }).select("_id");
+  // ─── Commit: O(1) Quick-Lookup (Sets vs Arrays) ───
+  // Pattern: Convert our account IDs into a Set.
+  // Performance: Finding an ID in an Array is "O(n)" (slow). Finding it in a Set is "O(1)" (Instant).
+  const userAccounts = await Account.find({ user: req.user._id }).select("_id").lean();
   const accountIds = userAccounts.map((a) => a._id);
+  const accountIdsSet = new Set(accountIds.map((id) => id.toString()));
 
   const query = {
     $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
   };
 
+  // ─── Commit: Lazy Document Counting ───
+  // What this does: Skips the "Total Count" DB roundtrip for simple dashboard previews.
+  // Why it exists: Aggregating 10k rows just to show a "5 most recent" list is inefficient.
   const [transactions, total] = await Promise.all([
     Transaction.find(query)
       .sort({ createdAt: -1 })
@@ -233,19 +244,33 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
       .limit(limit)
       .populate("fromAccount", "currency")
       .populate("toAccount", "currency")
+<<<<<<< HEAD
       .lean(), // '.lean()' makes the query 3x faster by returning raw objects instead of Mongoose Heavy documents.
     Transaction.countDocuments(query),
   ]);
 
+=======
+      .lean(),
+    page > 1 || limit > 10 ? Transaction.countDocuments(query) : Promise.resolve(null),
+  ]);
+
+  // Faster debit/credit tagging with O(1) Set lookup
+>>>>>>> main
   const enriched = transactions.map((tx) => {
-    const isDebit = accountIds.some((id) => id.equals(tx.fromAccount?._id));
+    const isDebit = tx.fromAccount && accountIdsSet.has(tx.fromAccount._id.toString());
     return { ...tx, type: isDebit ? "debit" : "credit" };
   });
 
   return res.status(200).json(
     new ApiResponse(
       200,
-      { transactions: enriched, total, page, limit, totalPages: Math.ceil(total / limit) },
+      { 
+        transactions: enriched, 
+        total: total ?? transactions.length, 
+        page, 
+        limit, 
+        totalPages: total ? Math.ceil(total / limit) : (transactions.length < limit ? 1 : null) 
+      },
       "Transaction history fetched."
     )
   );

@@ -11,23 +11,45 @@ const Account = require("../../modules/accounts/account.model");
  * Provides intelligent financial insights and recommendations
  */
 class FinancialAdvisor {
+  constructor() {
+    this._cache = new Map();
+    this._CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  }
+
   /**
    * Analyze spending patterns and provide insights
    */
+<<<<<<< HEAD
   // ─── Commit: Spending Analysis Logic ───
   // What this does: Gathers transactions from the database for a specific period (e.g., 30 days) and asks the AI to find patterns.
   // How it works: 1. Calculates start date. 2. Queries MongoDB for matching transactions. 3. Formats summary. 4. Sends formatted prompt to AI.
   // Interview insight: Why query by account IDs? Because a single user might have multiple accounts (Savings, Checking), and we want a "Holistic View".
+=======
+  // Spending Analysis Logic ───────────────────────────────────────────────────
+>>>>>>> main
   async analyzeSpending(userId, options = {}) {
     const { period = 30, category = null } = options;
+    const cacheKey = `${userId}_${period}_${category || "all"}`;
+
+    // Check cache
+    const cached = this._cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this._CACHE_TTL) {
+      console.log(`Serving cached analysis for ${cacheKey}`);
+      return cached.data;
+    }
 
     // Fetch user's transactions based on date range
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - period);
 
     // Identify all accounts owned by this user
+<<<<<<< HEAD
     const userAccounts = await Account.find({ user: userId });
+=======
+    const userAccounts = await Account.find({ user: userId }).select("_id").lean();
+>>>>>>> main
     const accountIds = userAccounts.map((acc) => acc._id);
+    const accountIdsSet = new Set(accountIds.map(id => id.toString()));
 
     // Mongoose query using $or to find transactions where user is either sender or receiver
     const query = {
@@ -41,10 +63,15 @@ class FinancialAdvisor {
 
     const transactions = await Transaction.find(query)
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(100)
+      .lean();
 
     // Prepare transaction summary (math-heavy part)
+<<<<<<< HEAD
     const summary = await this._summarizeTransactions(transactions, userId);
+=======
+    const summary = await this._summarizeTransactions(transactions, userId, accountIdsSet);
+>>>>>>> main
 
     // ─── Commit: AI Prompt Engineering for Analysis ───
     // What this does: Carefully crafts a text prompt that tells the AI exactly how to analyze the data.
@@ -97,12 +124,17 @@ Format as JSON:
     // Parse the AI's text response back into a standard Javascript object
     const analysis = this._parseJSON(response.content);
 
-    return {
+    const result = {
       summary,
       analysis,
       period,
       generatedAt: new Date(),
     };
+
+    // Cache the result
+    this._cache.set(cacheKey, { timestamp: Date.now(), data: result });
+
+    return result;
   }
 
   /**
@@ -173,7 +205,11 @@ ${transactions
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
 
+<<<<<<< HEAD
     const userAccounts = await Account.find({ user: userId });
+=======
+    const userAccounts = await Account.find({ user: userId }).select("_id").lean();
+>>>>>>> main
     const accountIds = userAccounts.map((acc) => acc._id);
 
     const query = {
@@ -185,7 +221,10 @@ ${transactions
       query.category = category;
     }
 
-    const transactions = await Transaction.find(query).sort({ createdAt: 1 });
+    const transactions = await Transaction.find(query)
+      .select("amount createdAt category")
+      .sort({ createdAt: 1 })
+      .lean();
 
     const dailySpending = this._groupByDay(transactions);
 
@@ -328,11 +367,16 @@ Return ONLY the category name, nothing else.`;
   /**
    * Helper: Summarize transactions
    */
+<<<<<<< HEAD
   // ─── Commit: Data Pre-processing / Aggregation ───
   // What this does: Iterates through transaction arrays to calculate totals, category counts, and daily peaks.
   // How it works: Uses a Set to track user IDs and performs basic arithmetic.
   // Interview insight: This logic is "O(n)" complexity because we only loop through the list once.
   async _summarizeTransactions(transactions, userId) {
+=======
+  // Data Pre-processing / Aggregation ─────────────────────────────────────────
+  async _summarizeTransactions(transactions, userId, userAccountIds) {
+>>>>>>> main
     const summary = {
       totalCount: transactions.length,
       totalSpent: 0,
@@ -344,9 +388,12 @@ Return ONLY the category name, nothing else.`;
 
     const daySpending = {};
 
+<<<<<<< HEAD
     const userAccountIds = new Set();
     const userAccounts = await Account.find({ user: userId });
     userAccounts.forEach(acc => userAccountIds.add(acc._id.toString()));
+=======
+>>>>>>> main
 
     transactions.forEach((t) => {
       const isOutgoing = userAccountIds.has(t.fromAccount.toString());

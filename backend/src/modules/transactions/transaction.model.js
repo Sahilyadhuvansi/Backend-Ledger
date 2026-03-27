@@ -99,9 +99,16 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+<<<<<<< HEAD
 // ─── Commit: Model Compilation ───
 // What this does: Turns the blueprint (Schema) into a working tool (Model).
 // Beginner note: Think of Schema as a Recipe, and Model as the actual Dish you interact with.
+=======
+// Compound Performance Indexes
+transactionSchema.index({ fromAccount: 1, createdAt: -1 });
+transactionSchema.index({ toAccount: 1, createdAt: -1 });
+transactionSchema.index({ createdAt: -1 });
+>>>>>>> main
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
 module.exports = Transaction;

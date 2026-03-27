@@ -19,10 +19,20 @@ import TransactionTable from "./components/TransactionTable";
 import InvestmentCard from "./components/InvestmentCard";
 import AIAssistant from "./components/AIAssistant";
 
+// ─── Commit: Simple In-Memory Dashboard Cache ───
+// What this does: Stores the latest dashboard data in a "Global Object" outside the React component cycle.
+// Why it exists: Normal React state is lost when you change pages. This cache makes navigation "Instant".
+// Interview insight: This is a simplified "Stale-While-Revalidate" (SWR) pattern. We show the old (stale) data immediately, then fetch new data silently.
+const dashboardCache = {
+  accounts: [],
+  transactions: [],
+  hasData: false,
+};
+
 const Dashboard = () => {
-  const [accounts, setAccounts] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState(dashboardCache.accounts);
+  const [transactions, setTransactions] = useState(dashboardCache.transactions);
+  const [loading, setLoading] = useState(!dashboardCache.hasData);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,15 +46,28 @@ const Dashboard = () => {
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      // ─── Commit: UX Speed Optimization (Skip Pulse) ───
+      // What this does: Only shows the full "Pulse" loading screen if we have literally ZERO data.
+      // Why it exists: If we already have cached data, showing a loading screen feels like a regression. No screen = Instant feel.
+      else if (!dashboardCache.hasData) setLoading(true);
 
       const [accountsRes, transactionsRes] = await Promise.all([
         api.get("/accounts"),
         api.get("/transactions/history?limit=5"),
       ]);
 
-      setAccounts(accountsRes?.data?.data || []);
-      setTransactions(transactionsRes?.data?.data?.transactions || []);
+      const accountsData = accountsRes?.data?.data || [];
+      const transactionsData = transactionsRes?.data?.data?.transactions || [];
+
+      // Update State
+      setAccounts(accountsData);
+      setTransactions(transactionsData);
+
+      // Update Global Cache for next visit
+      dashboardCache.accounts = accountsData;
+      dashboardCache.transactions = transactionsData;
+      dashboardCache.hasData = true;
+
     } catch (err) {
       setError(err?.response?.data?.message || err.message);
     } finally {
