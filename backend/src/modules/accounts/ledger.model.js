@@ -32,10 +32,17 @@ const ledgerSchema = new mongoose.Schema(
       immutable: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-// Immobilize entries: Once written, they can't be modified or deleted.
+ledgerSchema.index({ account: 1, createdAt: -1 });
+ledgerSchema.index({ createdAt: -1 });
+
+// ─── Commit: Immutability Enforcer (Mongoose Hooks) ───
+// What this does: Intercepts any attempt to UPDATE or DELETE a ledger entry and stops it with an error.
+// Why it exists: Legal and financial compliance. A ledger entry is a "Fact". You don't delete facts; you create a new entry to "reverse" them.
+// How it works: Uses Mongoose "Pre-middleware" hooks. If any 'update' or 'delete' command is sent, the 'preventModification' function is triggered.
+// Interview insight: This is called an "Append-Only Design". It is vital for High-Integrity bank systems and Blockchain logic.
 function preventModification(next) {
   next(
     new Error(

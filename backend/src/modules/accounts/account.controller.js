@@ -31,8 +31,10 @@ const getAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Account not found.");
   }
 
+  const verify = req.query.verify === "true";
+
   const [calculatedBalance, recentTransactions] = await Promise.all([
-    account.calculateCurrentBalance(),
+    verify ? account.calculateCurrentBalance() : Promise.resolve(account.balance), // complex math ONLY if requested
     Ledger.find({ account: id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -43,7 +45,7 @@ const getAccountDetails = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(
       200,
-      { ...account.toObject(), calculatedBalance, recentTransactions },
+      { ...account.toObject(), balance: account.balance, verifiedBalance: calculatedBalance, recentTransactions },
       "Account details fetched successfully."
     )
   );
