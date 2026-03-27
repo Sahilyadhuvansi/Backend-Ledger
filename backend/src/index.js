@@ -4,8 +4,7 @@ const dns = require('node:dns');
 // Configure Google DNS to prevent resolution issues with MongoDB Atlas or other external services
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-
-// ─── Core Library and Route Imports ───────────────────────────────────────────
+// ─── Module Imports ───────────────────────────────────────────────────────────
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -19,31 +18,30 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const { MongoStore } = require("connect-mongo");
 
+// ─── Configuration & Utilities ────────────────────────────────────────────────
+const connectDB = require("./config/db");
+const validateEnv = require("./config/validateEnv");
 
-// Feature Routes (MVC Pattern) ─────────────────────────────────────────────────
+// ─── Feature Routes (MVC Pattern) ─────────────────────────────────────────────
 const authRoutes = require("./modules/auth/auth.routes");
 const accountRoutes = require("./modules/accounts/account.routes");
 const transactionRoutes = require("./modules/transactions/transaction.routes");
 const aiRoutes = require("./modules/ai/ai.routes");
 
+// 🛰️ Phase 1: Fail-fast Validation
+validateEnv();
 
-// ─── Environment Validation ───────────────────────────────────────────────────
-const REQUIRED_ENV = ["JWT_SECRET", "MONGO_URI"];
-const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
-if (missingEnv.length > 0) {
-  console.error(`❌ Missing required environment variables: ${missingEnv.join(", ")}`);
-  process.exit(1);
-}
-
-console.log(`📡 Groq API Key present: ${!!process.env.GROQ_API_KEY}`);
-
+// 🚀 Phase 2: Orchestration & Middleware Setup
+const app = express();
+const server = http.createServer(app);
+app.set("trust proxy", 1);
 
 // ─── Cross-Origin Resource Sharing (CORS) Configuration ───────────────────────
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5001",
   "http://localhost:5000",
-  "https://mini-bank-beta.vercel.app", // Production frontend – always allowed
+  "https://mini-bank-beta.vercel.app",
   ...(process.env.CORS_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean),
 ];
 if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
@@ -52,10 +50,7 @@ const isOriginAllowed = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) return true;
   if (process.env.NODE_ENV !== "production") {
-    return (
-      origin.startsWith("http://localhost") ||
-      /http:\/\/(192\.168|10|172)\./.test(origin)
-    );
+    return origin.startsWith("http://localhost") || /http:\/\/(192\.168|10|172)\./.test(origin);
   }
   return false;
 };
@@ -68,41 +63,6 @@ const corsOptions = {
   credentials: true,
 };
 
-
-// ─── Database Connection Management ───────────────────────────────────────────
-let dbError = null;
-let dbConnectPromise = null;
-
-const connectDB = async () => {
-  if (mongoose.connection.readyState === 1) return;
-  if (dbConnectPromise) return dbConnectPromise;
-
-  dbConnectPromise = mongoose
-    .connect(process.env.MONGO_URI, {
-      autoIndex: process.env.NODE_ENV !== "production",
-      serverSelectionTimeoutMS: 8000,
-    })
-    .then(() => {
-      console.log("✅ MongoDB connected");
-    })
-    .catch((err) => {
-      dbConnectPromise = null;
-      dbError = err.message;
-      console.error("❌ MongoDB connection failed:", err.message);
-      if (process.env.NODE_ENV !== "production") process.exit(1);
-    });
-
-  return dbConnectPromise;
-};
-
-
-// ─── Express App and Server Initialization ────────────────────────────────────
-const app = express();
-const server = http.createServer(app);
-
-app.set("trust proxy", 1);
-
-
 // ─── Real-Time Communication (Socket.io) ──────────────────────────────────────
 const io = new Server(server, { cors: corsOptions });
 
@@ -110,133 +70,93 @@ io.on("connection", (socket) => {
   socket.on("register_user", (userId) => {
     if (userId) {
       socket.join(String(userId));
-      console.log(`Socket joined room: ${userId}`);
+      console.log(`📡 Socket joined room: ${userId}`);
     }
   });
-  socket.on("disconnect", () => {
-    console.log("Socket disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => console.log("🔌 Socket disconnected"));
 });
 
+// Inject IO into request for controllers
 app.use((req, _res, next) => {
   req.io = io;
   next();
 });
 
-
-// ─── Security and Traffic Middleware Pipeline ─────────────────────────────────
+// ─── Security and Traffic Pipeline ────────────────────────────────────────────
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        fontSrc: ["'self'", "https:"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https:", "http://localhost:*", "ws://localhost:*"],
-        objectSrc: ["'none'"],
-      },
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:", "http://localhost:*", "ws://localhost:*"],
+      objectSrc: ["'none'"],
     },
-  })
-);
+  },
+}));
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-
-// ─── State Persistence (Session Management) ───────────────────────────────────
-app.use(
-  session({
-    secret: process.env.JWT_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      collectionName: "sessions",
-      ttl: 24 * 60 * 60, // 24 hours in seconds
-    }),
-    cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    },
-  })
-);
-
+// ─── State Persistence (Sessions) ─────────────────────────────────────────────
+app.use(session({
+  secret: process.env.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: "sessions",
+    ttl: 24 * 60 * 60,
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  },
+}));
 
 // ─── Defensive Programming (Rate Limiting) ────────────────────────────────────
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
 });
-
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { message: "Too many auth attempts, please try again later." },
 });
 
-
 // ─── API Routes ──────────────────────────────────────────────────────────────
-app.get("/", (_req, res) => {
-  res.status(200).json({
-    message: "Backend Ledger API is running",
-    environment: process.env.NODE_ENV,
-    version: "1.0.0",
-  });
-});
-
-app.get("/health", (_req, res) => {
-  const dbConnected = mongoose.connection.readyState === 1;
-  return res.status(dbConnected ? 200 : 503).json({
-    status: dbConnected ? "healthy" : "unhealthy",
-    database: dbConnected ? "connected" : "disconnected",
-    ...(dbError && { dbError }),
-    timestamp: new Date().toISOString(),
-  });
-});
+app.get("/", (_req, res) => res.json({ message: "Asset Ledger API v1.0", status: "Active" }));
+app.get("/health", (_req, res) => res.json({ status: mongoose.connection.readyState === 1 ? "healthy" : "reconnecting" }));
 
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/accounts", apiLimiter, accountRoutes);
 app.use("/api/transactions", apiLimiter, transactionRoutes);
 app.use("/api/ai", apiLimiter, aiRoutes);
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ message: "Route not found" });
-});
-
-
-// ─── Centralized Error Handling Middleware ────────────────────────────────────
+// ─── Centralized Error Handling ───────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
   const statusCode = err.statusCode || 500;
-  const isProd = process.env.NODE_ENV === "production";
-  console.error(`❌ [${statusCode}] ${err.message}`);
-  if (!isProd) console.error(err.stack);
+  console.error(`❌ [Error] ${err.message}`);
   res.status(statusCode).json({
-    message: isProd && statusCode === 500 ? "Internal Server Error" : err.message,
+    message: process.env.NODE_ENV === "production" && statusCode === 500 ? "Internal Server Error" : err.message,
     ...(err.errors?.length > 0 && { errors: err.errors }),
   });
 });
 
-
-// ─── Server Launch ────────────────────────────────────────────────────────────
+// 🔌 Phase 3: Launch
 const startServer = async () => {
   await connectDB();
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
+  server.listen(PORT, () => console.log(`🚀 Gateway established on port ${PORT}`));
 };
 
 startServer();
