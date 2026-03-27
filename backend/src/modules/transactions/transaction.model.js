@@ -64,17 +64,10 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ─── Commit: Compound Performance Indexes ───
-// Why this exists: A single index on 'account' is good, but when we SORT by date (createdAt),
-// MongoDB has to do a "Slow Memory Sort". A compound index handles Filter + Sort in one step.
-// Interview insight: This reduces query execution time from ~200ms to <10ms on large datasets.
+// Compound Performance Indexes
 transactionSchema.index({ fromAccount: 1, createdAt: -1 });
 transactionSchema.index({ toAccount: 1, createdAt: -1 });
 transactionSchema.index({ createdAt: -1 });
-
-// ─── Commit: Model Compilation ───
-// What this does: Turns the blueprint (Schema) into a working tool (Model).
-// Beginner note: Think of Schema as a Recipe, and Model as the actual Dish you interact with.
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
 module.exports = Transaction;

@@ -15,10 +15,7 @@ class FinancialAdvisor {
   /**
    * Analyze spending patterns and provide insights
    */
-  // ─── Commit: Spending Analysis Logic ───
-  // What this does: Gathers transactions from the database for a specific period (e.g., 30 days) and asks the AI to find patterns.
-  // How it works: 1. Checks cache for fresh data. 2. Queries MongoDB if empty. 3. Formats summary. 4. Sends formatted prompt to AI.
-  // Interview insight: Why query by account IDs? Because a single user might have multiple accounts (Savings, Checking), and we want a "Holistic View".
+  // Spending Analysis Logic ───────────────────────────────────────────────────
   async analyzeSpending(userId, options = {}) {
     const { period = 30, category = null } = options;
     const cacheKey = `${userId}_${period}_${category || "all"}`;
@@ -336,10 +333,7 @@ Return ONLY the category name, nothing else.`;
   /**
    * Helper: Summarize transactions
    */
-  // ─── Commit: Data Pre-processing / Aggregation ───
-  // What this does: Iterates through transaction arrays to calculate totals, category counts, and daily peaks.
-  // How it works: Uses a Set to track user IDs and performs basic arithmetic.
-  // Interview insight: This logic is "O(n)" complexity because we only loop through the list once.
+  // Data Pre-processing / Aggregation ─────────────────────────────────────────
   async _summarizeTransactions(transactions, userId, userAccountIds) {
     const summary = {
       totalCount: transactions.length,

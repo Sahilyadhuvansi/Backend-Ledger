@@ -222,17 +222,20 @@ const createInitialFundsTransaction = asyncHandler(async (req, res) => {
 
 // ─── Transaction History ─────────────────────────────────────────────────────
 const getTransactionHistory = asyncHandler(async (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 10, 100); // cap at 100
+  const limit = Math.min(Number(req.query.limit) || 10, 100);
   const page = Math.max(Number(req.query.page) || 1, 1);
   const skip = (page - 1) * limit;
 
-  const userAccounts = await Account.find({ user: req.user._id }).select("_id");
+  // Use lean and index-only fetch for accounts
+  const userAccounts = await Account.find({ user: req.user._id }).select("_id").lean();
   const accountIds = userAccounts.map((a) => a._id);
+  const accountIdsSet = new Set(accountIds.map((id) => id.toString()));
 
   const query = {
     $or: [{ fromAccount: { $in: accountIds } }, { toAccount: { $in: accountIds } }],
   };
 
+  // Skip total count for first-page dashboard previews to save one DB roundtrip
   const [transactions, total] = await Promise.all([
     Transaction.find(query)
       .sort({ createdAt: -1 })
@@ -241,19 +244,25 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
       .populate("fromAccount", "currency")
       .populate("toAccount", "currency")
       .lean(),
-    Transaction.countDocuments(query),
+    page > 1 || limit > 10 ? Transaction.countDocuments(query) : Promise.resolve(null),
   ]);
 
-  // Tag each transaction as debit or credit from the user's perspective
+  // Faster debit/credit tagging with O(1) Set lookup
   const enriched = transactions.map((tx) => {
-    const isDebit = accountIds.some((id) => id.equals(tx.fromAccount?._id));
+    const isDebit = tx.fromAccount && accountIdsSet.has(tx.fromAccount._id.toString());
     return { ...tx, type: isDebit ? "debit" : "credit" };
   });
 
   return res.status(200).json(
     new ApiResponse(
       200,
-      { transactions: enriched, total, page, limit, totalPages: Math.ceil(total / limit) },
+      { 
+        transactions: enriched, 
+        total: total ?? transactions.length, 
+        page, 
+        limit, 
+        totalPages: total ? Math.ceil(total / limit) : (transactions.length < limit ? 1 : null) 
+      },
       "Transaction history fetched."
     )
   );

@@ -19,10 +19,18 @@ import TransactionTable from "./components/TransactionTable";
 import InvestmentCard from "./components/InvestmentCard";
 import AIAssistant from "./components/AIAssistant";
 
+// ─── Simple In-Memory Dashboard Cache ───
+// This keeps your data alive between page navigations for instant loading.
+const dashboardCache = {
+  accounts: [],
+  transactions: [],
+  hasData: false,
+};
+
 const Dashboard = () => {
-  const [accounts, setAccounts] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState(dashboardCache.accounts);
+  const [transactions, setTransactions] = useState(dashboardCache.transactions);
+  const [loading, setLoading] = useState(!dashboardCache.hasData);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,15 +44,26 @@ const Dashboard = () => {
   const fetchData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      // Only show full-screen pulse if we literally have zero data
+      else if (!dashboardCache.hasData) setLoading(true);
 
       const [accountsRes, transactionsRes] = await Promise.all([
         api.get("/accounts"),
         api.get("/transactions/history?limit=5"),
       ]);
 
-      setAccounts(accountsRes?.data?.data || []);
-      setTransactions(transactionsRes?.data?.data?.transactions || []);
+      const accountsData = accountsRes?.data?.data || [];
+      const transactionsData = transactionsRes?.data?.data?.transactions || [];
+
+      // Update State
+      setAccounts(accountsData);
+      setTransactions(transactionsData);
+
+      // Update Global Cache for next visit
+      dashboardCache.accounts = accountsData;
+      dashboardCache.transactions = transactionsData;
+      dashboardCache.hasData = true;
+
     } catch (err) {
       setError(err?.response?.data?.message || err.message);
     } finally {
